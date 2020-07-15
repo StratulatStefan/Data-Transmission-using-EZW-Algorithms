@@ -1,5 +1,7 @@
 from general_use import *
 import time
+import serial
+
 
 # - functie care realizeaza handshake-ul cu clientul pentru a-l informa cu privire la modalitatea de comunicare
 # aleasa si pentru a stabili conexiunea cu acesta
@@ -32,7 +34,8 @@ def CommunicationHandshake(TCPConnection, comselection) -> bool:
 			return ErrorResponse
 		return 0, TCPConnection, True
 	elif comselection == 1:
-		if not UARTConnectionCheck():
+		UARTConnection = serial.Serial("/dev/ttyS0", baudrate = 576000, timeout=None)
+		if not UARTConnectionCheck(UARTConnection):
 			return ErrorResponse
 		return 1, UARTConnection, True
 	else:
@@ -63,6 +66,26 @@ def TCPConnectionCheck(sock) -> bool:
 	return True
 
 # functia care trimite mesaje de verificare a conexiunii prin UART
-def UARTConnectionCheck() -> bool:
+def UARTConnectionCheck(port) -> bool:
 	# vom trimite 3 mesaje pentru care asteptam confirmare imediata
-	pass
+	print("\n\n")
+	# vom trimite 3 mesaje pentru care asteptam confirmare imediata
+	for index in range(1,4):
+		# compunem mesajul
+		verification_msg = f"[HS] MSG{index}"
+		# encodam mesajul
+		encoded_verification_msg = data_encode(verification_msg)
+		# trimitem mesajul
+		print(f"* Am trimis MSG{index}")
+		port.write(encoded_verification_msg)
+		# asteptam confirmare
+		print(f"* Asteptam ACK corespunzator")
+		ack = port.read()
+		remaining_bytes = port.inWaiting()
+		ack += port.read(remaining_bytes)
+		# am primit ACK
+		ack_data = data_decode(ack)
+		print(f">>> Am primit ack pentru mesajul trimis : {ack_data}")
+		time.sleep(1)
+	print("* Handshake realizat cu succes!")
+	return True
