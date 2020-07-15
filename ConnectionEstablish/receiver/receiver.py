@@ -14,7 +14,8 @@ def TCPCommunication(connection):
 	exit(0)
 
 def UARTCommunication(connection):
-	pass
+	print("FUCK YEAHsss")
+	exit(0)
 
 
 

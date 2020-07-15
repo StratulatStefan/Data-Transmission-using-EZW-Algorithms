@@ -1,4 +1,5 @@
 from general_use import *
+import serial
 
 # functie care trateaza realizarea handshake-ului cu serverul
 def CommunicationHandshake(sock, data) -> bool:
@@ -19,6 +20,7 @@ def CommunicationHandshake(sock, data) -> bool:
 	encodedack_message = data_encode(ackmessage)
 	sock.sendall(encodedack_message)
 	print(f">>> ACK trimis cu succes catre server!")
+
 	# incepem secventa de trimitere de mesaje de verificare pe canalul de comunicare stabilit
 	print(f"* Incepem secventa de verificare specifica {comtypeName}...")
 	if comtypeId == 0 :
@@ -26,15 +28,52 @@ def CommunicationHandshake(sock, data) -> bool:
 			return ErrorResponse
 		return 0, sock, True
 	elif comtypeId == 1:
-		if not UARTConnectionCheck():
+		UARTConnection = serial.Serial("/dev/ttyS0", baudrate = 576000, timeout=None)
+		if not UARTConnectionCheck(UARTConnection):
 			return ErrorResponse
 		return 1, UARTConnection, True
 	else:
 		return ErrorResponse
 	print("******************\n\n")
 
-def UARTConnectionCheck() -> bool:
-	pass
+def UARTConnectionCheck(port) -> bool:
+	print("\n\n")
+	# ne asteptam sa primim 3 mesaje
+	messages_count = 1
+	while True:
+		# asteptam primirea unui mesaj
+		print("* Asteptam mesajul...")
+		data = port.read()
+		remaining_bytes = port.inWaiting()
+		data += port.read(remaining_bytes)
+		# am primit un mesaj, pe care il decodificam
+		decoded_data = data_decode(data)
+		# extragem doar continutul relevant
+		if "[HS]" not in decoded_data:
+			pass
+		decoded_data = relevant_data_handshake(decoded_data)
+		print(f">>> Am primit mesajul {decoded_data}")
+        # extragem indexul verificarii din mesaj
+		id = int(extract_number(decoded_data))
+		if id > messages_count:
+			break
+#              pass
+		elif id == messages_count:
+			messages_count += 1
+            # am primit mesajul corect
+            # compunem mesajul de confirmare
+			ack = f"[HS] ACK MSG{id}"
+            # encodam mesajul de confirmare
+			encoded_ack = data_encode(ack)
+            # trimitem confirmare
+			print(f"* Trimitem mesajul de confirmare pentru MSG{id}")
+			port.write(encoded_ack)
+			print(f">>> Am trimis confirmare pentru MSG{id}!")
+			if id == 3:
+				break   
+	print(f"* Handshake realizat cu succes!")
+	return True
+
 
 # functia care trimite mesaje de verificare a conexiunii prin Socket-uri TCP
 def TCPConnectionCheck(sock) -> bool:
