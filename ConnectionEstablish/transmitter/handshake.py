@@ -13,19 +13,47 @@ def CommunicationHandshake(TCPConnection, comselection) -> bool:
 	# identificam modalitatea de comunicare
 	communication = "UART" if comselection == 1 else "TCP" if comselection == 0 else None
 	# formam mesajul de initializare a Handshake-ului
-	initMessage = f"[HS] INIT {communication}"
-	# trimitem mesajul catre client prin canalul de comunicare
-	print("* Trimitem mesajul de initiere a handshake-ului catre client!")
-	socketWRITEMessage(TCPConnection,initMessage)
-	print(">>> Initializare trimisa cu succes!")
-	print("* Asteptam ACK de la client!")
-	# asteptam primirea ack-ului de la client, pentru a indica daca a salvat modalitatea de comunicare
-	ackdata = socketREADMessage(TCPConnection)
-	print(f">>> Am primit ACK de la client : {ackdata}!")
-	if "STARTED" not in ackdata :
-		# nu am primit mesajul de raspuns corect!
-		pass
-		# return ErrorResponse
+	reloads = 1
+	while True:
+		initMessage = f"[HS] INIT {communication}"
+		#initMessage = f"INIT {communication}"
+		# trimitem mesajul catre client prin canalul de comunicare
+		print("\n* Trimitem mesajul de initiere a handshake-ului catre client!")
+		socketWRITEMessage(TCPConnection,initMessage)
+		print(">>> Initializare trimisa cu succes!")
+		print("* Asteptam ACK de la client!")
+		# asteptam primirea ack-ului de la client, pentru a indica daca a salvat modalitatea de comunicare
+		ackdata = socketREADMessage(TCPConnection)
+		print(f">>> Am primit ACK de la client : {ackdata}!")
+		if "Waiting" in ackdata:
+			# am primit un ack gresit..
+			if reloads == 3:
+				# se permit doar 3 erori! Returnam eroare!
+				print("* Am primit un ack eronat de prea multe ori! Intrerupem!")
+				return ErrorResponse
+			# incercam retransmisia
+			print("* Am primit un ack eronat! Reluam handshake-ul!")
+			reloads += 1
+			time.sleep(1)
+			continue
+		else:
+			reloads = 1
+
+		if "STARTED" not in ackdata :
+			# nu am primit mesajul de raspuns corect!
+			if reloads == 3:
+				# se permit doar 3 erori! Returnam eroare!
+				print("* Am primit ack eronat de prea multe ori! Intrerupem!")
+				return ErrorResponse
+			# incercam retransmisia
+			print("* Am primit un ack eronat! Relaum handshake-ul!")
+			reloads += 1
+			time.sleep(1)
+			continue
+		else:
+			reloads = 1
+			break
+
 	# incepem secventa de trimitere de mesaje de verificare pe canalul de comunicare stabilit
 	print(f"* Incepem secventa de verificare specifica {communication}...")
 	# identificam tipul de comunicare necesar pe baza tipului specificat

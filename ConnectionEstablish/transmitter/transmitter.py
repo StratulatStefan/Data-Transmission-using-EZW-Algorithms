@@ -5,6 +5,7 @@ import re
 import subprocess
 from handshake import *
 from general_use import *
+from communication import *
 
 config = {
 	"host" : "192.168.43.43", # HOST-ul serverului
@@ -29,11 +30,6 @@ def GetCommunicationMode() -> int:
 			break
 		print("*********************************")
 	return selection
-
-# functia de transfer a fisierelor prin TCP
-def TCPCommunication(connection):
-	print("fucking yeah")
-	pass
 
 # functia de transfer a fisierelor prin UART
 def UARTCommunication(connection):
@@ -72,7 +68,7 @@ if __name__ == "__main__":
 			while True:
 				# informam clientul cu privire la alegerea facuta si realizam handshake-ul
 				# salvam status-ul handshake-ului, conexiunea si tipul conexiunii
-				type, connection, HSstatus = CommunicationHandshake(connection, communicationMode)
+				type, conn, HSstatus = CommunicationHandshake(connection, communicationMode)
 				if not HSstatus:
 					# handshake esuat
 					print("* Handshake-ul a esuat!")
@@ -82,12 +78,12 @@ if __name__ == "__main__":
 					if type == 0:
 						# initiem comunicarea prin TCP
 						# parasim bucla de reluare a handshake-ului, deoarece a fost efectuat cu succes
-						TCPCommunication(connection)
+						TCPCommunication(conn)
 						break
 					elif type == 1:
 						# initiem comunicarea prin UART
 						# parasim bucla de reluare a handshake-ului
-						UARTCommunication(connection)
+						UARTCommunication(conn)
 						break
 					else:
 						# tipul de comunicare identificat este eronat
