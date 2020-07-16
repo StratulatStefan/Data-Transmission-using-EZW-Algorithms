@@ -3,22 +3,12 @@ import serial
 import subprocess
 from general_use import *
 from handshake import *
+from communication import *
 
 config = {
 	"host" : "192.168.43.43", # HOST-ul serverului
 	"port" : 7000		  # PORT-ul pe care este mapat serverul
 }
-
-# functia care realizeaza transmiterea fisierelor prin TCP
-def TCPCommunication(connection):
-	print("FUCK YEAH")
-	exit(0)
-
-# functia care realizeaza transmiterea fisierelor prin UART
-def UARTCommunication(connection):
-	print("FUCK YEAHsss")
-	exit(0)
-
 
 
 if __name__ == "__main__":

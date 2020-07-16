@@ -9,9 +9,22 @@ def CommunicationHandshake(sock, data) -> bool:
 	ErrorResponse = None, None, False
 	print("Handshake\n")
 	# verificam daca initializarea Handshake-ului contine "INIT"; altfel, intrerupem
-	if "INIT" not in data:
-		pass
-		#return ErrorResponse
+	reloads = 1
+	while True:
+		if "INIT" not in data:
+			if reloads == 3:
+				# se permit doar 3 erori! Returnam eroare!
+				return ErrorResponse
+			# nu am primit un mesaj valid! Atentionam serverul!
+			errorMessage = "Waiting for handshake!"
+			socketWRITEMessage(sock, errorMessage)
+			reloads += 1
+			time.sleep(1)
+			continue
+		else:
+			reloads = 1
+			break
+
 	# identificam tipul de comunicare dorita : 0 - TCP | 1 - UART
 	comtypeId = communication_type(data)
 	comtypeName = "TCP" if comtypeId == 0 else "UART" if comtypeId == 1 else None
