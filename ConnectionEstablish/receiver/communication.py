@@ -32,9 +32,6 @@ def CheckForExistanceAndDelete(filename):
 		# scrierea in fisier se face secvential, folosind "ab" (append binary)
 		os.remove(filename)
 
-
-
-
 # functia care realizeaza transmiterea fisierelor prin TCP
 def TCPCommunication(connection):
 	print("-------------------------------")
@@ -44,7 +41,7 @@ def TCPCommunication(connection):
 			print("***********************")
 			print("Waiting for data...")
 			# asteptam (blocant) receptionarea a 1024 de octeti
-			data = socket.recv(1024)
+			data = socketREAD(connection)
 
 			# verificam daca am primit numele fisierului
 			if CheckForFilename(data):
@@ -74,12 +71,12 @@ def UARTCommunication(connection):
 		print("[Waiting for data]")
 
 		# citim un octet de pe portul serial
-		data_chunk = port.read()
+		data_chunk = connection.read()
 		time.sleep(0.01)
 
 		# identificam si citim restul octetilor de pe portul serial
-		remaining_bytes = port.inWaiting()
-		data_chunk += port.read(remaining_bytes)
+		remaining_bytes = connection.inWaiting()
+		data_chunk += connection.read(remaining_bytes)
 
 		# - verificam daca mesajul primit reprezinta numele fisierului
 		# sau un pachet de octeti ce compun fisierului
