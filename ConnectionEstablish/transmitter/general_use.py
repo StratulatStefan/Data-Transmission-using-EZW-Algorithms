@@ -7,13 +7,14 @@ data_decode = lambda message : message.decode("utf-8")
 
 # functie folosita pentru transmiterea octetilor prin socket TCP
 def socketWRITE(sock, message):
-        # trimitem mesajul encodat
+        # trimitem octetii
 	sock.sendall(message)
 
 # functie folosita pentru transmiterea unui mesaj prin socket TCP
 def socketWRITEMessage(sock, message):
         # encodam messajul
 	encoded_msg = data_encode(message)
+	# trimitem mesajul
 	socketWRITE(sock, encoded_msg)
 
 # functie folosita pentru transmiterea octetilor prin UART

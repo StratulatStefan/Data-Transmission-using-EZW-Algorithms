@@ -30,15 +30,16 @@ def GetCommunicationMode() -> int:
 		print("*********************************")
 	return selection
 
-# functia de comunicare TCP
+# functia de transfer a fisierelor prin TCP
 def TCPCommunication(connection):
 	print("fucking yeah")
 	pass
 
-# functia de comunicare UART
+# functia de transfer a fisierelor prin UART
 def UARTCommunication(connection):
 	print("Fuck yeasss!")
 	exit(0)
+
 
 if __name__ == "__main__":
 	# curatam consola pentru o afisare mai cool
@@ -66,19 +67,30 @@ if __name__ == "__main__":
 			print(f"* S-a conectat un client : {address}")
 			# identificam modalitatea de comunicare
 			communicationMode = GetCommunicationMode()
-			# informam clientul cu privire la alegerea facuta si realizam handshake-ul
-			# salvam status-ul handshake-ului, conexiunea si tipul conexiunii
-			type, connection, HSstatus = CommunicationHandshake(connection, communicationMode)
-			if not HSstatus:
-				# handshake esuat
-				print("* Handshake-ul a esuat!")
-				exit(-1)
-			else:
-				if type == 0:
-					TCPCommunication(connection)
-				elif type == 1:
-					UARTCommunication(connection)
+			# - bucla infinita pentru a repeta handshake-ul, ori de cate ori este nevoie
+			# pana se efectueaza cu succes
+			while True:
+				# informam clientul cu privire la alegerea facuta si realizam handshake-ul
+				# salvam status-ul handshake-ului, conexiunea si tipul conexiunii
+				type, connection, HSstatus = CommunicationHandshake(connection, communicationMode)
+				if not HSstatus:
+					# handshake esuat
+					print("* Handshake-ul a esuat!")
+					print("* Se reia handshake-ul!")
 				else:
-					print("dafuk!")
-					exit(-1)
+					# handshake efectuat cu succes
+					if type == 0:
+						# initiem comunicarea prin TCP
+						# parasim bucla de reluare a handshake-ului, deoarece a fost efectuat cu succes
+						TCPCommunication(connection)
+						break
+					elif type == 1:
+						# initiem comunicarea prin UART
+						# parasim bucla de reluare a handshake-ului
+						UARTCommunication(connection)
+						break
+					else:
+						# tipul de comunicare identificat este eronat
+						# reluam handshake-ul
+						print("* Canal de comunicare ales eronat!")
 
