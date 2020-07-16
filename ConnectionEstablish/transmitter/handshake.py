@@ -29,62 +29,38 @@ def CommunicationHandshake(TCPConnection, comselection) -> bool:
 		# return ErrorResponse
 	# incepem secventa de trimitere de mesaje de verificare pe canalul de comunicare stabilit
 	print(f"* Incepem secventa de verificare specifica {communication}...")
+	connection = None
 	if comselection == 0:
-		if not TCPConnectionCheck(TCPConnection):
-			return ErrorResponse
-		return 0, TCPConnection, True
+		connection = TCPConnection
 	elif comselection == 1:
-		UARTConnection = serial.Serial("/dev/ttyS0", baudrate = 576000, timeout=None)
-		if not UARTConnectionCheck(UARTConnection):
-			return ErrorResponse
-		return 1, UARTConnection, True
-	else:
+		connection = serial.Serial("/dev/ttyS0", baudrate = 576000, timeout=None)
+
+	invalidcomselection = comselection < 0 or comselection > 1
+	if invalidcomselection or not ConnectionCheck(connection, comselection):
 		return ErrorResponse
 
+	return comselection, connection, True
 	print("**********************************\n\n")
 
-# functia care trimite mesaje de verificare a conexiunii prin Socket-uri TCP
-def TCPConnectionCheck(sock) -> bool:
-	print("\n\n")
-	# vom trimite 3 mesaje pentru care asteptam confirmare imediata
-	for index in range(1,4):
-		# compunem mesajul
-		verification_msg = f"[HS] MSG{index}"
-		# encodam mesajul
-		encoded_verification_msg = data_encode(verification_msg)
-		# trimitem mesajul
-		print(f"* Am trimis MSG{index}")
-		sock.sendall(encoded_verification_msg)
-		# asteptam confirmare
-		print(f"* Asteptam ACK corespunzator")
-		ack = sock.recv(1024)
-		# am primit ACK
-		ack_data = data_decode(ack)
-		print(f">>> Am primit ack pentru mesajul trimis : {ack_data}")
-		time.sleep(1)
-	print("* Handshake realizat cu succes!")
-	return True
+# functia care trimite mesaje de verificare a conexiunii, corespunzator mediului de comunicare ales
+def ConnectionCheck(connection, selection) -> bool:
+        # determinam functiile necesare pentru citire si scriere, pe baza tipul de comunicare ales
+        # folosim referinte la acele functii
+	readFunction = uartREADMessage if selection == 1 else socketREADMessage if selection == 0 else None
+	writeFunction = uartWRITEMessage if selection == 1 else socketWRITEMessage if selection == 0 else None
 
-# functia care trimite mesaje de verificare a conexiunii prin UART
-def UARTConnectionCheck(port) -> bool:
-	# vom trimite 3 mesaje pentru care asteptam confirmare imediata
 	print("\n\n")
 	# vom trimite 3 mesaje pentru care asteptam confirmare imediata
 	for index in range(1,4):
 		# compunem mesajul
 		verification_msg = f"[HS] MSG{index}"
-		# encodam mesajul
-		encoded_verification_msg = data_encode(verification_msg)
 		# trimitem mesajul
 		print(f"* Am trimis MSG{index}")
-		port.write(encoded_verification_msg)
+		writeFunction(connection, verification_msg)
 		# asteptam confirmare
 		print(f"* Asteptam ACK corespunzator")
-		ack = port.read()
-		remaining_bytes = port.inWaiting()
-		ack += port.read(remaining_bytes)
+		ack_data = readFunction(connection)
 		# am primit ACK
-		ack_data = data_decode(ack)
 		print(f">>> Am primit ack pentru mesajul trimis : {ack_data}")
 		time.sleep(1)
 	print("* Handshake realizat cu succes!")
