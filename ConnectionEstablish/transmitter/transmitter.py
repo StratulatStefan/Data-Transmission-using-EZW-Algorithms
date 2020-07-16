@@ -31,11 +31,6 @@ def GetCommunicationMode() -> int:
 		print("*********************************")
 	return selection
 
-# functia de transfer a fisierelor prin UART
-def UARTCommunication(connection):
-	print("Fuck yeasss!")
-	exit(0)
-
 
 if __name__ == "__main__":
 	# curatam consola pentru o afisare mai cool
