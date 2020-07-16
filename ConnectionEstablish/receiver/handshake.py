@@ -2,8 +2,10 @@ from general_use import *
 import serial
 
 # functie care trateaza realizarea handshake-ului cu serverul
+# se asteapta primirea mesajului de initializare a Handshake-ului
 def CommunicationHandshake(sock, data) -> bool:
 	print("******************")
+	# raspuns returnat in cazul in care handshake-ul a esuat
 	ErrorResponse = None, None, False
 	print("Handshake\n")
 	# verificam daca initializarea Handshake-ului contine "INIT"; altfel, intrerupem
@@ -17,22 +19,31 @@ def CommunicationHandshake(sock, data) -> bool:
 	print(f"* Trimitem ACK catre server...")
 	# formam mesajul de ACK si il trimitem catre server
 	ackmessage = f"[HS] STARTED {comtypeName}"
-	encodedack_message = data_encode(ackmessage)
-	sock.sendall(encodedack_message)
+	socketWRITEMessage(sock, ackmessage)
 	print(f">>> ACK trimis cu succes catre server!")
 
 	# incepem secventa de trimitere de mesaje de verificare pe canalul de comunicare stabilit
 	print(f"* Incepem secventa de verificare specifica {comtypeName}...")
+	# determinam comunicarea necesara, pe baza tipului de comunicare
 	connection = None
 	if comtypeId == 0 :
+		# folosim socket-ul pe care l-am primit ca parametru
 		connection = sock
 	elif comtypeId == 1:
+		# definim un port serial pentru transmiterea datelor
+		# portul pe care se va mapa UART : /dev/ttyS0
+		# nr. de biti trimiti pe secunda : baudrate
+		# functia de citire a datelor asteapta primirea datelor la infinit : timeout = None
 		connection = serial.Serial("/dev/ttyS0", baudrate = 576000, timeout=None)
-
+	# valoare booleana ce devine True, daca tipul de comunicare stabilit este invalid
 	invalidcomtypeId = comtypeId < 0 or comtypeId > 1
+	# apelam functia de transmitere a mesajelor de verificare, corespunzatoare comunicarii alese
 	if invalidcomtypeId or not ConnectionCheck(connection, comtypeId):
+		# nu avem tipul de comunicare dorit sau transmiterea de mesaje intre medii a esuat
 		return ErrorResponse
 
+	# - comunicarea dintre cele doua medii s-a efectuat cu succes, deci handshake-ul s-a efectuat cu succes
+	# comunicarea poate fi stabilita
 	return comtypeId, connection, True
 	print("******************\n\n")
 
@@ -44,20 +55,23 @@ def ConnectionCheck(connection, selection) -> bool:
 	writeFunction = uartWRITEMessage if selection == 1 else socketWRITEMessage if selection == 0 else None
 
 	print("\n\n")
-	# ne asteptam sa primim 3 mesaje
+	# ne asteptam sa primim 3 mesaje, pentru care trebuie sa trimitem confirmare
+	# fiecare mesaj trebuie sa aiba un index specific, mai mic/egal cu 3
 	messages_count = 1
 	while True:
 		# asteptam primirea unui mesaj
 		print("* Asteptam mesajul...")
 		data = readFunction(connection)
-		# extragem doar continutul relevant
 		if "[HS]" not in data:
+			# nu primim un mesaj specific handshake-ului
 			pass
+		# pastram informatia relevanta din mesaj
 		decoded_data = relevant_data_handshake(data)
 		print(f">>> Am primit mesajul {decoded_data}")
  		# extragem indexul verificarii din mesaj
 		id = int(extract_number(decoded_data))
 		if id > messages_count:
+			# nu am primit mesajul cu indexul corect
 			break
 		#	pass
 		elif id == messages_count:
@@ -70,6 +84,7 @@ def ConnectionCheck(connection, selection) -> bool:
 			writeFunction(connection, ack)
 			print(f">>> Am trimis confirmare pentru MSG{id}!")
 			if id == 3:
+				# am primit cele trei mesaje, deci handshake-ul a fost efectuat cu succes!
 				break
 	print(f"* Handshake realizat cu succes!")
 	return True

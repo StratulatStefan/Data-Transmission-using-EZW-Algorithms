@@ -6,26 +6,28 @@ data_encode = lambda message : message.encode("utf-8")
 # functie lambda care decodifica un mesaj din format binar in format string
 data_decode = lambda message : message.decode("utf-8")
 
-# functie lambda care identifica modalitatea de comunicare
+# functie lambda care identifica modalitatea de comunicare pe baza string-ului
 communication_type = lambda message : 0 if "TCP" in message else 1 if "UART" in message else None
 
 # functie lambda care returneaza continutul necesar din mesajul specific Handshake-ului
+# se elimina componenta "[HS] "
 relevant_data_handshake = lambda message : re.findall("\[HS\]\s(.+)", message)[0]
 
 # functie lambda care extrage un numar dintr-un string
-# folosita in cazul extragerii index-ului din ACK
+# folosita in cazul extragerii index-ului din ACK-ul specific Handshake-ului
 extract_number = lambda message : re.findall("[0-9]+", message)[0]
 
 
-# functie folosita pentru transmiterea octetilor prin socket TCP
+# functie folosita pentru transmiterea octetilor prin socket-ul TCP
 def socketWRITE(sock, message):
-        # trimitem mesajul encodat
+        # trimitem mesajul in format binar
 	sock.sendall(message)
 
-# functie folosita pentru transmiterea unui mesaj prin socket TCP
+# functie folosita pentru transmiterea unui mesaj prin socket-ul TCP
 def socketWRITEMessage(sock, message):
         # encodam messajul
 	encoded_msg = data_encode(message)
+	# trimitem mesajul
 	socketWRITE(sock, encoded_msg)
 
 # functie folosita pentru transmiterea octetilor prin UART
