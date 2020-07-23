@@ -1,15 +1,7 @@
 ## Acest folder contine o scurta introducere/familiarizare cu analiza Fourier in domeniul procesarii de imagini.
   * calculul tr. Fourier directe si inverse
   * reprezentarea spectrului tr. Fourier
-    <br/>
-    <img src="https://github.com/StratulatStefan/Data-Transmission-using-EZW-Algorithms/blob/master/FrequencyDomain/Results/FourierSpectrum.png" width = 350px height=200px />
   * aplicarea unor filtre in domeniul frecventa (cu diferite frecvente de taiere)
-    * High Pass Filter
-      <br/>
-      <img src="https://github.com/StratulatStefan/Data-Transmission-using-EZW-Algorithms/blob/master/FrequencyDomain/Results/HighPassFilter.png" width = 450px height=250px />
-    * Low Pass Filter
-      <br/>
-      <img src="https://github.com/StratulatStefan/Data-Transmission-using-EZW-Algorithms/blob/master/FrequencyDomain/Results/LowPassFilter.png" width = 450px height=250px />
+   * High Pass Filter
+   * Low Pass Filter
   * reprezentarea unor filtre de baza in domeniul frecventa
-   <br/>
-   <img src="https://github.com/StratulatStefan/Data-Transmission-using-EZW-Algorithms/blob/master/FrequencyDomain/Results/BasicFiltersInFreqDomain.png" width = 450px height=250px />
