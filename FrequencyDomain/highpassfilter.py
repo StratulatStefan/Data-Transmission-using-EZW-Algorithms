@@ -102,8 +102,7 @@ if __name__ == "__main__":
     lowpass15 = HighPassFilterGaussian(image.shape, 15)
     lowpass30 = HighPassFilterGaussian(image.shape, 30)
     lowpass50 = HighPassFilterGaussian(image.shape, 50)
-    lowpass65 = HighPassFilterGaussian(image.shape,
-                                       65)
+    lowpass65 = HighPassFilterGaussian(image.shape, 65)
 
     '''
     lowpass15 = HighPassFilterButterWorth(image.shape, 15, 2)
