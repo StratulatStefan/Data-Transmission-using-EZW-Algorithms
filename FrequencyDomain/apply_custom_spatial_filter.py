@@ -11,13 +11,22 @@ def GaussianSpacialFilter():
     # 4  16  24  16  4 #
     # 1   4   6   4  1 #
     ####################
-    array = np.array([[1,  4,  6,  4, 1],
-                     [4, 16, 24, 16, 4],
-                     [6, 24, 36, 24, 6],
-                     [4, 16, 24, 16, 4],
-                     [1,  4,  6,  4, 1]])
-
-    return array[:] # / 256
+    array = np.array([[1, 4, 6, 4, 1],
+                      [4, 16, 24, 16, 4],
+                      [6, 24, 36, 24, 6],
+                      [4, 16, 24, 16, 4],
+                      [1, 4, 6, 4, 1]], np.float32)
+    ''''
+    array = np.array(([1,2,1],
+                      [2,4,2],
+                      [1,2,1]), np.float32)
+    
+    # Sobel y
+    array = np.array(([ 1,  2,  1],
+                      [ 0,  0,  0],
+                      [-1, -2, -1]), np.float32)
+    '''
+    return array
 
 # - functie care realizeaza extinderea unui vector
 # - functia este folosita pentru aplicarea unui filtru spatial pe o anumita imagine
@@ -46,9 +55,23 @@ def ExpandArray(array, new_size):
     # 0   0   0   0   0   0  0  0  0  #
     # 0   0   0   0   0   0  0  0  0  #
     ###################################
-    new_array[rhalf - rows : rhalf + rows + 1, chalf - cols : chalf + cols + 1] = array
+    x = rhalf - rows
+    xx = rhalf + rows + 1
+    y = chalf - cols
+    yy = chalf + cols + 1
+    new_array[rhalf - rows : rhalf + rows + 1, chalf - cols : chalf + cols + 1] = np.float32(array)
 
     return new_array
+
+'''
+Pasi
+1). citire imagine
+2). definire filtru/kernel in domeniul spatial
+3). expandare kernel pentru a avea aceeasi dimensiune cu imaginea
+4). calculare tr.Fourier pentru fiecare in parte
+5). inmultirea celor doua spectre
+6). tr. Fourier inversa pentru determinarea imaginii finale
+'''
 
 if __name__ == "__main__":
     imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
@@ -72,7 +95,9 @@ if __name__ == "__main__":
     gaussian_fourier = Fourier(gaussian_spacial)
 
     # realizam inmultirea celor doua in sensul aplicarii filtrului
-    image_filtered = image_fourier * gaussian_fourier
+    image_filtered = cv.mulSpectrums(a=image_fourier, b=gaussian_fourier, flags=cv.DFT_SCALE)
+    #image_filtered = cv.multiply(image_fourier, gaussian_fourier)
+    ##image_filtered = image_fourier * gaussian_fourier
 
     # determinam magnitudinea spectrului imaginii initiale
     image_spectrum = LogScale(Magnitude(image_fourier))
@@ -83,7 +108,7 @@ if __name__ == "__main__":
 
     # determinam imaginea rezultata prin aplicarea inversa a tr. Fourier
     resultat = Magnitude(InverseFourier(image_filtered))
-
+    resultat = RecenterSpectrum(resultat)
 
     # realizam desenare
     Plot(image, 241, "Original")

@@ -76,7 +76,7 @@ def Fourier(image):
 # functie care realizeaza calculul transformatei Fourier inverse
 def InverseFourier(dft):
     # recentram spectrul (din mijlocul imaginii) in origine (0,0)
-    f_ishift = np.fft.ifftshift(dft)
+    f_ishift = np.fft.fftshift(dft)
 
     # Sau putem folosi f_ishift = RecenterSpectrum(dft)
 
