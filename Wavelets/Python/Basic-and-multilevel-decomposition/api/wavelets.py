@@ -26,7 +26,7 @@ def WaveletDecomposition(image, wavelet_type):
 
 # functie care realizeaza descompunere multipla in subbenzi
 def WaveletMultipleDecomposition(image, wavelet_type, level):
-    if level < 0:
+    if level <= 0:
         raise Exception("Invalid decomposition level!")
 
     DWT = {}

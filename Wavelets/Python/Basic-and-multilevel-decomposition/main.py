@@ -11,18 +11,24 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"[Exception] {exc}")
         exit(-1)
-
+    #######################################################################
+    # facem descompunerea folosind wavelets
     # pentru determinarea principalelor tipuri de wavelet : pywt.wavelist()
-    print(pywt.wavelist())
-    decomposition = WaveletDecomposition(image, "bior1.1")
+    decomposition = WaveletDecomposition(image, "haar") # descompunere cu un singur nivel
+    try:
+        # descompunere pe mai nivele
+        # avem grija sa tratam exceptia generata din cauza unui nr. invalid de nivele
+        multiple_decomposition = WaveletMultipleDecomposition(image, "haar", 1)
+    except Exception as e:
+        print(f"[Exception] {e}")
+        exit(-1)
+    #######################################################################
+    # obtinem o singura imagine care contine cele 4 cadre
     DWT = DWTResultComposer(decomposition)
-    mDWT = WaveletMultipleDecomposition(image, "haar", 3)
-    PlotMultiDWT(mDWT, 0)
-
-    #pyplot.figure(0)
-    #Plot(image, 111, "Original image")
-
-    #PlotDWT(decomposition, 1)
-
-
+    #######################################################################
+    # plotam rezultatele obtinute
+    pyplot.figure(0)
+    Plot(image, 111, "Original image")
+    PlotDWT(decomposition, 1)
+    PlotMultiDWT(multiple_decomposition, 0)
     pyplot.show()
