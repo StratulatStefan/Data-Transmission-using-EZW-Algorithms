@@ -18,7 +18,7 @@ def Plot(image, position, title):
     pyplot.title(title)
     pyplot.imshow(image, cmap='gray')
 
-# functie care ploteaza cele 4 imagini rezultate din DWT
+# functie care ploteaza cele 4 imagini rezultate din DWT color
 def PlotDWT(components, figure_index):
     pyplot.figure(num=figure_index)
     pyplot.suptitle(f"DWT Level {figure_index + 1}")
