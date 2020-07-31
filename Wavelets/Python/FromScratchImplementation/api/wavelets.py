@@ -1,7 +1,7 @@
 import pywt.data
 from api.convolutional import *
-from api.plotter import *
 from api.line_based import *
+from api.lifting_scheme import *
 
 # functie care realizeaza descompunerea cu wavelets, folosind functia din libraria PyWavelets
 def LibraryDWTCompute(image, wavelet_type):
@@ -14,6 +14,21 @@ def ScratchDWTComputeRCWT(image, wavelet_type):
     available_wavelets = ["db4"]
     if wavelet_type in available_wavelets:
         tmp = Convolutional_Daubechies_4(image)
+    else:
+        raise Exception("Invalid wavelet type!")
+    rows, cols = map(lambda x : int(x/2), tmp.shape)
+    LL = tmp[:rows, :cols]
+    HL = tmp[:rows, cols:]
+    LH = tmp[rows:, :cols]
+    HH = tmp[rows:, cols:]
+    return LL, (LH, HL, HH)
+
+# functie care realizeaza descompunerea cu wavelets, folosind propria implementare si
+# abordarea Lifting Scheme Wavelet Transform
+def ScratchDWTComputeLS(image, wavelet_type):
+    available_wavelets = ["db4"]
+    if wavelet_type in available_wavelets:
+        tmp = Lifting_Scheme_Daubechies_4(image)
     else:
         raise Exception("Invalid wavelet type!")
     rows, cols = map(lambda x : int(x/2), tmp.shape)

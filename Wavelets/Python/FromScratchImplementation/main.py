@@ -1,6 +1,7 @@
 from api.general_use import *
 from api.plotter import *
 from api.wavelets import *
+import time
 
 if __name__ == "__main__":
     imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
@@ -15,10 +16,31 @@ if __name__ == "__main__":
     # facem descompunerea folosind wavelets
     # pentru determinarea principalelor tipuri de wavelet : pywt.wavelist()
     try:
-        decomposition = WaveletDecomposition(image, "db4", LibraryDWTCompute) # descompunere cu un singur nivel
         # avem grija sa tratam exceptia generata din cauza tipului invalid de wavelet
-       # decomposition1 = WaveletDecomposition(image, "db4", ScratchDWTComputeRCWT)
-        decomposition2 = WaveletDecomposition(image, "db4", ScratchDWTComputeLBWT)
+
+        start = time.time_ns()
+        decomposition = None
+        #decomposition = WaveletDecomposition(image, "db4", LibraryDWTCompute) # descompunere cu un singur nivel
+        stop = time.time_ns()
+        print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
+
+        start = time.time_ns()
+        decomposition1 = None
+        #decomposition1 = WaveletDecomposition(image, "db4", ScratchDWTComputeRCWT)
+        stop = time.time_ns()
+        print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
+
+        start = time.time_ns()
+        decomposition2 = None
+        #decomposition2 = WaveletDecomposition(image, "db4", ScratchDWTComputeLBWT)
+        stop = time.time_ns()
+        print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
+
+        start = time.time_ns()
+        decomposition3 = WaveletDecomposition(image, "db4", ScratchDWTComputeLS)
+        stop = time.time_ns()
+        print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
+
         # descompunere pe mai nivele
         # avem grija sa tratam exceptia generata din cauza unui nr. invalid de nivele
         multiple_decomposition = WaveletMultipleDecomposition(image, "haar", 1, LibraryDWTCompute)
@@ -27,15 +49,20 @@ if __name__ == "__main__":
 
     #######################################################################
     # obtinem o singura imagine care contine cele 4 cadre
-    DWT = DWTResultComposer(decomposition)
+    #DWT = DWTResultComposer(decomposition)
     #######################################################################
 
     # plotam rezultatele obtinute
     #pyplot.figure(0)
     #Plot(image, 111, "Original image")
-    #PlotDWT(decomposition, 0)
-    #PlotDWT(decomposition1, 1)
-    PlotDWT(decomposition2, 2)
+    if decomposition:
+        PlotDWT(decomposition, 0)
+    if decomposition1:
+       PlotDWT(decomposition1, 1)
+    if decomposition2:
+        PlotDWT(decomposition2, 2)
+    if decomposition3:
+        PlotDWT(decomposition3, 3)
     #PlotMultiDWT(multiple_decomposition, 0)
     ###############################################################################################
     ####################################### RGB image #############################################

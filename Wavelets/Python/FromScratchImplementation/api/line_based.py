@@ -21,8 +21,9 @@ interleaved in an L x M buffer.
 
 # functie care efectueaza descompunerea folosind LBWT, Daubechies-4 wavelet
 def Linear_Based_Daubechies_4(image):
-    # definim cele doua filtre
-    low, high = Daubechies_4()
+    # definim cele doua filtre si pastram doar primele n_dec decimale
+    n_dec = 5
+    low, high = map(lambda element : list(map(lambda item : round(item, n_dec), element)), Daubechies_4())
 
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = image.shape
@@ -36,45 +37,43 @@ def Linear_Based_Daubechies_4(image):
     filter_size = len(low)
 
     # cream un buffer in care vom stoca cele filter_size linii ce vor filtrare ulterior
-    buffer = np.empty((filter_size, cols), np.float32)
+    buffer = np.zeros((filter_size, cols), np.float32)
 
-    # filtram orizontal cate filter_size linii
-    # cand intalnim o a-"filter-size" linie, filtram vertical si anterioarele filter_size linii
+    # notal L = filter_size
+    # filtram orizontal cate L linii
+    # cand intalnim o a L-a linie, filtram vertical si anterioarele L linii
+    pos = 0
     for i in range(0, rows, 1):
-        if i % filter_size == 0:
-            # o a filter-size linie; efectuam filtrarea verticala
-            if i != 0:
-                # filtram anterioarele 4 linii
-                for ii in range(0, int(filter_size / 2) - 1, 1):
-                    for j in range(0, cols , 1):
-                        # scalare
-                        temp[i + ii, j] = buffer[2 * ii, j] * low[0] + \
-                                  buffer[2 * ii + 1, j] * low[1] + \
-                                  buffer[2 * ii + 2, j] * low[2] + \
-                                  buffer[2 * ii + 3, j] * low[3]
-                        # transformare
-                        temp[i + ii + int(rows / 2), j] = buffer[2 * ii, j] * high[0] + \
-                                                  buffer[2 * ii + 1, j] * high[1] + \
-                                                  buffer[2 * ii + 2, j] * high[2] + \
-                                                  buffer[2 * ii + 3, j] * high[3]
-            # golim bufferul in care vom stoca cele 4 linii
-            buffer = np.empty((filter_size, cols), np.float32)
+        if i % filter_size == 0 and i != 0:
+            for ii in range(0, int(filter_size / 2), 1):
+                for j in range(0, cols, 1):
+                    # scalare
+                    temp[pos + ii, j] = buffer[2 * ii, j] * low[0] + \
+                                   buffer[2 * ii + 1 if 2 * ii + 1 < filter_size else 2 * ii, j] * low[1] + \
+                                   buffer[2 * ii + 2 if 2 * ii + 2 < filter_size else 2 * ii, j] * low[2] + \
+                                   buffer[2 * ii + 3 if 2 * ii + 3 < filter_size else 2 * ii, j] * low[3]
+                    # transformare
+                    temp[pos + ii + int(rows / 2), j] = buffer[2 * ii, j] * high[0] + \
+                                                   buffer[2 * ii + 1 if 2 * ii + 1 < filter_size else 2 * ii, j] * high[1] + \
+                                                   buffer[2 * ii + 2 if 2 * ii + 2 < filter_size else 2 * ii, j] * high[2] + \
+                                                   buffer[2 * ii + 3 if 2 * ii + 3 < filter_size else 2 * ii, j] * high[3]
+            pos += int(filter_size/2)
         # filtrare orizontala
         for j in range(0, int(cols / 2) - 1, 1):
             # scalare
             # functia de scalare (low) va genera jumatate din nr. total de valori, reprezentand valorile netezite
             # valorile acestei parcurgeri se pun in prima jumatate a vectorului rezultat
-            buffer[i % 4, j % 4] = image[i, 2 * j + 0] * low[0] + \
-                             image[i, 2 * j + 1] * low[1] + \
-                             image[i, 2 * j + 2] * low[2] + \
-                             image[i, 2 * j + 3] * low[3]
+            buffer[i % filter_size, j] = image[i, 2 * j + 0] * low[0] + \
+                                                       image[i, 2 * j + 1] * low[1] + \
+                                                       image[i, 2 * j + 2] * low[2] + \
+                                                       image[i, 2 * j + 3] * low[3]
             # transformare
             # functia de transformare (high) va genera jumatate din nr. total de valori, reprezentand detaliile
             # valorile acestei parcurgeri se pun in a doua jumatate a vectorului rezultat
-            buffer[i % 4, (j + int(cols / 2)) % 4] = image[i, 2 * j + 0] * high[0] + \
-                                             image[i, 2 * j + 1] * high[1] + \
-                                             image[i, 2 * j + 2] * high[2] + \
-                                             image[i, 2 * j + 3] * high[3]
+            buffer[i % filter_size, j + int(cols / 2)] = image[i, 2 * j + 0] * high[0] + \
+                                                                         image[i, 2 * j + 1] * high[1] + \
+                                                                         image[i, 2 * j + 2] * high[2] + \
+                                                                         image[i, 2 * j + 3] * high[3]
 
     return temp
 
