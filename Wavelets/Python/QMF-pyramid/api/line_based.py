@@ -20,7 +20,7 @@ interleaved in an L x M buffer.
 ###########################################################################################################################
 
 # functie care efectueaza descompunerea folosind LBWT, Daubechies-4 wavelet
-def Linear_Based(image, wavelet_type):
+def Linear_Based(wavelet_type, image):
     # definim cele doua filtre si pastram doar primele n_dec decimale
     n_dec = 5
     low, high = map(lambda element : list(map(lambda item : round(item, n_dec), element)), wavelet_type)
@@ -34,9 +34,12 @@ def Linear_Based(image, wavelet_type):
     # dimensiunea filtrului
     if len(low) != len(high):
         raise Exception("Invalid filtering array size!")
+
+    # filtrul trebuie sa aiba dimensiune para; astfel, daca avem dimensiune impara, mai adaugam un 0
+    # nu are efect la nivel vizual
     if len(low) % 2 == 1:
-        low += [0]
-        high += [0]
+        low = [0] + low
+        high = [0] + high
     filter_size = len(low)
 
     # cream un buffer in care vom stoca cele filter_size linii ce vor filtrare ulterior
@@ -78,5 +81,15 @@ def Linear_Based(image, wavelet_type):
                 buffer[i % filter_size, j + int(cols / 2)] += \
                     image[i, 2 * j + index if 2 * j + index < cols else 2 * j] * high[index]
 
+    for ii in range(0, int(filter_size / 2) - 1, 1):
+        for j in range(0, cols, 1):
+            for index in range(filter_size):
+                # scalare
+                temp[pos + ii, j] += \
+                    buffer[2 * ii + index if 2 * ii + index < filter_size else 2 * ii, j] * low[index]
+
+                # transformare
+                temp[pos + ii + int(rows / 2) if pos + ii + int(rows / 2) < rows else pos + ii + int(rows / 2) - 1, j] += \
+                    buffer[2 * ii + index if 2 * ii + index < filter_size else 2 * ii, j] * high[index]
     return temp
 

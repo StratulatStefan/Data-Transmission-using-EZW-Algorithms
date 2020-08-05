@@ -10,7 +10,6 @@ from api.plotter import *
 def LibraryDWTCompute(image, wavelet_type):
     return pywt.dwt2(image, wavelet_type)
 
-
 # functie care realizeaza descompunerea cu wavelets, folosind propria implementare si
 # abordarea Row-Column Wavelet Transform
 def SingleThread_ScratchDWTComputeRCWT(image, wavelet_type):
@@ -32,8 +31,8 @@ def MultiThread_ScratchDWTComputeRCWT(image, wavelet_type):
         raise Exception("Invalid wavelet type!")
 
     # convolutia va fi executata de "processes" procese
-    # trebuie sa fie divizor al dimensiunii imaginii
-    processes = 8
+    # trebuie sa fie divizor al dimensiunii imaginii si sa fie cat mai aproape de 10
+    processes = GetIdealProcessesNumber(image.shape[0])
 
     # descompunem imaginea in "processes" subimagini, fiecare subimagine urmand sa fie executata de catre un proces
     # exemplu : imagine 512 x 512 si 8 subprocese => 8 imagini de 64 x 512 asupra carora se face convolutia in paralel
@@ -57,9 +56,9 @@ def MultiThread_ScratchDWTComputeRCWT(image, wavelet_type):
 
 # functie care realizeaza descompunerea cu wavelets, folosind propria implementare si
 # abordarea Row-Column Wavelet Transform
-def ScratchDWTComputeLBWT(image, wavelet_type):
+def SingleThread_ScratchDWTComputeLBWT(image, wavelet_type):
     if wavelet_type in available_wavelets:
-        tmp = Linear_Based(image, wavelet_type())
+        tmp = Linear_Based(wavelet_type(), image)
     else:
         raise Exception("Invalid wavelet type!")
     rows, cols = map(lambda x : int(x/2), tmp.shape)
@@ -67,6 +66,35 @@ def ScratchDWTComputeLBWT(image, wavelet_type):
     HL = tmp[:rows, cols:]
     LH = tmp[rows:, :cols]
     HH = tmp[rows:, cols:]
+    return LL, (LH, HL, HH)
+
+# functie care realizeaza descompunerea cu wavelets, folosind propria implementare si
+# abordarea Row-Column Wavelet Transform
+def MultiThread_ScratchDWTComputeLBWT(image, wavelet_type):
+    if wavelet_type not in available_wavelets:
+        raise Exception("Invalid wavelet type!")
+
+    # convolutia va fi executata de "processes" procese
+    # trebuie sa fie divizor al dimensiunii imaginii si sa fie cat mai aproape de 10
+    processes = GetIdealProcessesNumber(image.shape[0])
+
+    # descompunem imaginea in "processes" subimagini, fiecare subimagine urmand sa fie executata de catre un proces
+    # exemplu : imagine 512 x 512 si 8 subprocese => 8 imagini de 64 x 512 asupra carora se face convolutia in paralel
+    # descompunerea se face pe linii
+    images = ImageDecompose(image, processes)
+
+    # definim Pool-ul de procese care vor executa functia in paralel
+    with multiprocessing.Pool(processes=processes) as pool:
+        # executam operatia de convolutie in paralel, asupra celor "processes" imagini si extragem rezultatul final
+        func = partial(Linear_Based, wavelet_type())
+        tmp = pool.map(func=func, iterable=images)
+
+    final = ImageRecompose(tmp)
+    rows, cols = map(lambda x : int(x/2), final.shape)
+    LL = final[:rows, :cols]
+    HL = final[:rows, cols:]
+    LH = final[rows:, :cols]
+    HH = final[rows:, cols:]
     return LL, (LH, HL, HH)
 
 # functie care realizeaza descompunerea imaginii folosind wavelets

@@ -27,32 +27,32 @@ if __name__ == "__main__":
         start = time.time_ns()
         decomposition2 = None
         print("----------Multi Thread----------")
-        decomposition2 = WaveletDecomposition(image, QMF_5_tap_symmetric, MultiThread_ScratchDWTComputeRCWT)
+        #decomposition2 = WaveletDecomposition(image, QMF_5_tap_symmetric, MultiThread_ScratchDWTComputeRCWT)
         stop = time.time_ns()
         print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
 
         start = time.time_ns()
         decomposition1 = None
         print("----------Single Thread----------")
-        decomposition1 = WaveletDecomposition(image, QMF_5_tap_symmetric, SingleThread_ScratchDWTComputeRCWT)
+        #decomposition1 = WaveletDecomposition(image, QMF_5_tap_symmetric, SingleThread_ScratchDWTComputeRCWT)
         stop = time.time_ns()
         print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
 
-
+        start = time.time_ns()
+        decomposition4 = None
+        print("----------Multi Thread----------")
+        decomposition4 = WaveletDecomposition(image, QMF_5_tap_symmetric, MultiThread_ScratchDWTComputeLBWT)
+        stop = time.time_ns()
+        print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
 
         start = time.time_ns()
         decomposition3 = None
-        #decomposition3 = WaveletDecomposition(image, QMF_5_tap_symmetric, ScratchDWTComputeLBWT)
+        print("----------Single Thread----------")
+        decomposition3 = WaveletDecomposition(image, QMF_5_tap_symmetric, SingleThread_ScratchDWTComputeLBWT)
         stop = time.time_ns()
-        #print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
-
+        print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
     except Exception as exc:
         BasicException(exc)
-
-    #######################################################################
-    # obtinem o singura imagine care contine cele 4 cadre
-    #DWT = DWTResultComposer(decomposition)
-    #######################################################################
 
     # plotam rezultatele obtinute
     #pyplot.figure(0)
@@ -64,5 +64,7 @@ if __name__ == "__main__":
     if decomposition2:
         PlotDWT(decomposition2, 2)
     if decomposition3:
-        PlotDWT(decomposition2, 3)
+        PlotDWT(decomposition3, 3)
+    if decomposition4:
+        PlotDWT(decomposition4, 4)
     pyplot.show()

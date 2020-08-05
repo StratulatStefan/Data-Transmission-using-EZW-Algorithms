@@ -39,6 +39,8 @@ def GetChannel(image, channel):
         return image[:,:,2]
     raise Exception(f"Invalid channel : {channel}!")
 
+##########################################################################################
+
 # functie pentru tratarea unei exceptii prin afisarea unui mesaj si inchiderea programului
 def BasicException(exception):
     print(f"[Exception] {exception}")
@@ -50,6 +52,7 @@ get_dict_key_by_index = lambda dict, index : list(dict.keys())[index]
 # functie lambda care returneaza o valoare dintr-un dictionar dupa index
 get_dict_value_by_index = lambda dict, index : dict[get_dict_key_by_index(dict, index)]
 
+##########################################################################################
 
 # functie care descompune imaginea in "counter" subimagini dupa linii
 # cu alte cuvinte, imaginea se va imparti in "counter" bucati pe linii
@@ -88,6 +91,8 @@ def ImageDecompose(image, counter):
 
     return subimages
 
+##########################################################################################
+
 # functie care recompune imaginea din "counter" subimagini dupa linii
 def ImageRecompose(images):
     # extragem numarul de subimagini
@@ -113,3 +118,37 @@ def ImageRecompose(images):
         image[index * int(subimg_rows/2) + int(rows/2) : (index + 1) * int(subimg_rows/2) + int(rows/2), : int(subimg_cols/2)] = LH
         image[index * int(subimg_rows/2) + int(rows/2) : (index + 1) * int(subimg_rows/2) + int(rows/2), int(subimg_cols/2) : ] = HH
     return image
+
+##########################################################################################
+
+# - functie care determina numarul ideal de procese care vor executa paralel functiile dorite
+# - acest numar trebuie sa fie cat mai aproape de 10 : s-a observat experimental ca cele mai bune rezultate (timp)
+# se obtin atunci cand nr. de procese este cat mai apropiat de 10
+# - totodata, acest numar de procese trebuie sa fie divizor al coordonatei dimensionale pe baza careia se face divizarea (size)
+def GetIdealProcessesNumber(size):
+    ideal = 10
+
+    # tratam cazul cel mai frecvent
+    if size % 8 == 0:
+        return 8
+
+    # divizorii unui numar se gasesc pana la jumatatea acestuia
+    half = int(size/2)
+
+    # determinam divizorii numarului
+    dividers = []
+    for index in range(1, half):
+        if size % index == 0:
+            dividers.append(index)
+
+    # determinam divizorul cel mai apropiat de "ideal"
+    if ideal in dividers:
+        return ideal
+
+    # determinam diferenta in modul dintre fiecare divizor si 10
+    candidates = list(map(lambda value : abs(value - 10), dividers))
+
+    # indexul diferentei celei mai mici reprezinta indexul elementului cel mai apropiat de 10
+    indexOfIdeal = candidates.index(min(candidates))
+    ideal = dividers[indexOfIdeal]
+    return ideal
