@@ -23,7 +23,7 @@ Thereafter, the vertical filtering phase processes the column of the aux matrix 
 # avand in vedere ca efectuam convolutia pe o matrice de dimensiune mare (ex 512 x 512), calculul va dura foarte mult
 # pentru a evita acest lucru, bucla for (de convolutie) va fi paralelizata (se cunoaste faptul ca datele nu depinde unele de altele).
 # NU AM PARALELIZAT ! AM INCERCAT CATEVA SOLUTII BUNE, DAR NU AM CONCLUZIONAT !
-def Convolutional(image, wavelet_type):
+def Convolutional(wavelet_type, image):
     # definim cele doua filtre
     low, high = wavelet_type
 

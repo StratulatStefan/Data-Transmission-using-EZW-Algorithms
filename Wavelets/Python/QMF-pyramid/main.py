@@ -22,19 +22,29 @@ if __name__ == "__main__":
         decomposition = None
         #decomposition = WaveletDecomposition(image, "db2", LibraryDWTCompute) # descompunere cu un singur nivel
         stop = time.time_ns()
+        #print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
+
+        start = time.time_ns()
+        decomposition2 = None
+        print("----------Multi Thread----------")
+        decomposition2 = WaveletDecomposition(image, QMF_5_tap_symmetric, MultiThread_ScratchDWTComputeRCWT)
+        stop = time.time_ns()
         print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
 
         start = time.time_ns()
         decomposition1 = None
-        decomposition1 = WaveletDecomposition(image, QMF_5_tap_symmetric, ScratchDWTComputeRCWT)
+        print("----------Single Thread----------")
+        decomposition1 = WaveletDecomposition(image, QMF_5_tap_symmetric, SingleThread_ScratchDWTComputeRCWT)
         stop = time.time_ns()
         print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
 
+
+
         start = time.time_ns()
-        decomposition2 = None
-        decomposition2 = WaveletDecomposition(image, QMF_5_tap_symmetric, ScratchDWTComputeLBWT)
+        decomposition3 = None
+        #decomposition3 = WaveletDecomposition(image, QMF_5_tap_symmetric, ScratchDWTComputeLBWT)
         stop = time.time_ns()
-        print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
+        #print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
 
     except Exception as exc:
         BasicException(exc)
@@ -53,5 +63,6 @@ if __name__ == "__main__":
        PlotDWT(decomposition1, 1)
     if decomposition2:
         PlotDWT(decomposition2, 2)
-
+    if decomposition3:
+        PlotDWT(decomposition2, 3)
     pyplot.show()
