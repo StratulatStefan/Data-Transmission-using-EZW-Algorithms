@@ -25,6 +25,9 @@ class DominantListItem:
     def Reconstruction(self, reconstruction : int):
         self.reconstruction = reconstruction
 
+    def __str__(self):
+        return f"Coefficient [{self.coefficient}] === Symbol [{self.symbol}] === Reconstruction [{self.reconstruction}]"
+
 
 #####################################################################################
 # Toate implementarile urmatoare au in vedere abordarea SAQ, prezentata in document #
@@ -111,6 +114,7 @@ def ReorganizeMatrix(image, decomposition_levels):
 # - functie care efectueaza pasul dominant
 # - analiza nu se face pe o matrice descompusa de nivel 3, ci pe componente individuale ale acestei descompuneri, pentru o parcurgere
 # mai eficienta
+# - atentie la nr. de decomposition_levels (modificare formule ca sa mearga cu n decomposition_levels)
 def DominantPass(image, decomposition_levels, threshold):
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = image.shape
@@ -129,7 +133,6 @@ def DominantPass(image, decomposition_levels, threshold):
     initial_reconstruction_value = None
     # parcurgem lista de coeficienti si identificam tipul fiecarei valori
     for index, coefficient in enumerate(coefficients):
-        print(np.Inf)
         if coefficient == np.Inf:
             continue
         # identificam linia si coloana pe care se afla coeficientul curent
@@ -163,23 +166,73 @@ def DominantPass(image, decomposition_levels, threshold):
             # daca acesta are doar descendenti insignificanti, este considerat Zero Tree Root
 
             # parcurgem descendentii si verificam statusul lor
-            # pentru eficienta, daca gasim unul significant, il introducem in lista pentru a nu fi iterat de mai multe ori
             subbands = []
-            index = 15
+            x = coefficients[index]
             current_level = decomposition_levels - int(np.floor(math.log(index, 4)))
-            if current_level == decomposition_levels:
+            if current_level == 1:
+                candidate = DominantListItem("subband not defined yet", coefficient)
+                candidate.Reconstruction(0)
+                candidate.Symbol("Z")
+            elif current_level == decomposition_levels:
                 for higher_level in range(1,current_level):
-                    # nu e buna.. mai tre putin gandit aici..
-                    subbands.append((np.power(4, current_level - higher_level) * index , np.power(4, current_level - higher_level) * (index + 1)))
+                    inferior_limit = np.power(4, current_level - higher_level) * index
+                    superior_limit = np.power(4, current_level - higher_level) * (index + 1)
+                    subbands.append((inferior_limit, superior_limit))
             else:
                 divizor = index % np.power(4, current_level) - 4
                 inferior_limit_0 = np.power(4, current_level) + 2 * (divizor) + 4 * int(divizor / 2)
-                superior_limit_0 = inferior_limit_0 + int( np.power(4 / 2, current_level - 1))
+                superior_limit_0 = inferior_limit_0 + int(np.power(int(4/2), decomposition_levels - current_level))
                 inferior_limit_1 = inferior_limit_0 + np.power(4, current_level - 1)
-                superior_limit_1 = inferior_limit_1 + int( np.power(4 / 2, current_level - 1))
+                superior_limit_1 = inferior_limit_1 + int( np.power(int(4/2), decomposition_levels - current_level))
+                subbands.append((inferior_limit_0, superior_limit_0, inferior_limit_1, superior_limit_1))
+
+            significant_desc_found = False
+            for index in range(current_level - 1):
+                current_interval = subbands[index]
+                inferior_limit_0 = current_interval[0]
+                superior_limit_1 = current_interval[-1]
+                superior_limit_0 = None
+                inferior_limit_1 = None
+                if len(current_interval) > 2:
+                    superior_limit_0 = current_interval[1]
+                    inferior_limit_1 = current_interval[2]
+                idx = inferior_limit_0
+                # vrem sa putem schimba indexul iterator ; for idx in range nu ne permite acest lucru ; asadar folosind un while
+                if significant_desc_found == True:
+                    break
+                while idx < superior_limit_1:
+                    if idx == superior_limit_0:
+                        idx += (inferior_limit_1 - superior_limit_0)
+                    # prelucrare valoare (verificare tip valoarea)
+                    if abs(coefficients[idx]) > threshold:
+                        # s-a gasit un descendent significant, deci elementul curent nu poate fi considerat ZeroTreeRoot
+                        significant_desc_found = True
+                        break
+                    idx += 1
+
+                # initializam un nou tip de element pentru lista de coeficienti dominanti
+                candidate = DominantListItem("subband not defined yet", coefficient)
+                candidate.Reconstruction(0)
+                if significant_desc_found == True:
+                    candidate.Symbol("IZ")
+                else:
+                    # coeficientul curent este un ZTR intrucat nu are niciun descendent significant
+                    candidate.Symbol("ZTR")
+
+                    # parcurgem din nou toti descendentii si ii marcam cu inf pentru a fi ignorati la urmatoarele parcurgeri
+                    idx = inferior_limit_0
+                    while idx < superior_limit_1:
+                        if idx == superior_limit_0:
+                            idx += (inferior_limit_1 - superior_limit_0)
+                        # prelucrare valoare (verificare tip valoarea)
+                        coefficients[idx] = np.inf
+                        idx += 1
                 breakpoint = True
 
+        # adaugam coeficientul curent in lista
 
         dominantList.append(candidate)
+    for el in dominantList:
+        print(el)
     breakpoint = True
 
