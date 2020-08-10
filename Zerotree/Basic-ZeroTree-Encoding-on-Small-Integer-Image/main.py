@@ -18,10 +18,21 @@ if __name__ == "__main__":
                    [  2,    -3,     6,    -4,     3,     6,     3,     6],
                    [  5,    11,     5,     6,     0,     3,    -4,     4]), np.int32)
 
+
+    # extragem coordonatele dimensionale ale imaginii
+    rows, cols = DWT.shape
+
+    # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
+    # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
+    start = time.perf_counter_ns()
+    coefficients = ReorganizeMatrix(DWT, 3) # < 100 microsecunde
+    stop = time.perf_counter_ns()
+    print(f"Timp in microsecunde : {(stop - start) / 1e3}")
+
     T0 = GetInitialThreshold(DWT)
 
     # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
-    dominantList = DominantPass(DWT, 3, T0)
+    dominantList, coefficients = DominantPass(coefficients, (rows, cols), 3, T0)
 
     # Extragem lista subordonata, care contine coeficientii care au fost determinati ca fiind significant in urma pasului dominant
     subordinateList = IdentifySignificants(dominantList)
@@ -32,10 +43,26 @@ if __name__ == "__main__":
     dominantList = ListsDifference(dominantList, subordinateList)
 
     # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudin, Te
-    subordinateList = SubordinatePass(subordinateList, T0)
+    subordinateList0 = SubordinatePass(subordinateList, T0, 0)
 
     ####################################################################################################################
     # in acest punct, in subordonateList avem valorile significante, codificate si avand noua valoare de reconstructie #
     # iar in dominantList avem acele valori care nu au fost inca descoperite ca fiind significante                     #
     # doar asupra acestor valori se va realiza mai departe pasul dominant                                              #
     ####################################################################################################################
+
+    # determinam noul threshold ca jumatatea primului threshold
+    T1 = int(T0/2)
+
+    dominantList, coefficients = DominantPass(coefficients, (rows, cols), 3, T1)
+    subordinateList = IdentifySignificants(dominantList)
+    for element in subordinateList:
+        subordinateList0.append(element)
+    dominantList = ListsDifference(dominantList, subordinateList)
+    subordinateList = SubordinatePass(subordinateList0, T0, 1)
+
+
+    printList(subordinateList0)
+    print("xxxxxxxxxxxxxxxxxx")
+    printList(dominantList)
+

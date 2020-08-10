@@ -104,3 +104,16 @@ ClassAttributeByString = lambda object, criteria : getattr(object, criteria)
 # functie care realizeaza diferenta a doua liste (listA - listB)
 def ListsDifference(listA, listB):
     return list(filter(lambda candidate : candidate not in listB, listA))
+
+##########################################################################################
+
+# functie pentru afisarea la consola a unei liste de obiecte (care suprascriu functia __str__ [toString])
+def printList(candidate):
+    for element in candidate:
+        print(element)
+
+##########################################################################################
+
+# functie lambda care converteste o lista de liste la un set de liste
+# folosita pentru eliminarea duplicatelor dintr-o lista de liste
+ListToSet = lambda lists : set(tuple(lst) for lst in lists)

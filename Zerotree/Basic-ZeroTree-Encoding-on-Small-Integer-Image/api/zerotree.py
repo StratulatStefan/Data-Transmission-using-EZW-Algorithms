@@ -31,10 +31,13 @@ class DominantListItem:
         self.reconstruction = reconstruction
 
     def EncodingSymbol(self, encoding : int):
-        if encoding == 0 or encoding == 1:
+        self.encoding = encoding
+        '''
+        if encoding == 0 or encoding == 1 or encoding == 2:
             self.encoding = encoding
         else:
             raise Exception("Invalid Encoding Value")
+        '''
 
     def __str__(self):
         return f"Coefficient [{self.coefficient}] === Symbol [{self.symbol}] === Reconstruction [{self.reconstruction}] === Encoding [{self.encoding}]"
@@ -151,47 +154,47 @@ def ReorganizeMatrix(image, decomposition_levels):
 
     # face lista flatten (lista de liste devine lista)
     final = ListFlatter(ListFlatter(final))
+    final = [float(i) for i in final]
     return final
 
 # - functie care efectueaza pasul dominant
-# - analiza nu se face pe o matrice descompusa de nivel 3, ci pe componente individuale ale acestei descompuneri, pentru o parcurgere
-# mai eficienta
+# - analiza se face pe o matrice descompusa de nivel 3; se ofera ca input aceasta matrice sub forma de vector pentru o parcurgere mai eficienta
 # - atentie la nr. de decomposition_levels (modificare formule ca sa mearga cu n decomposition_levels)
-def DominantPass(image, decomposition_levels, threshold):
+def DominantPass(coefficients, coordinates, decomposition_levels, threshold):
     # extragem coordonatele dimensionale ale imaginii
-    rows, cols = image.shape
+    rows, cols = coordinates
 
     # cream lista da valori dominante
     dominantList = []
 
-    # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
-    # se asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
-    start = time.perf_counter_ns()
-    coefficients = ReorganizeMatrix(image, decomposition_levels) # < 100 microsecunde
-    stop = time.perf_counter_ns()
-
-    print(f"Timp in microsecunde : {(stop - start) / 1e3}")
+    # salvam o copie a listei de coeficienti necesara la urmatorii pasi dominanti
+    # astfel, prelucrarile coeficientilor necesare la urmatorii pasi se fac pe aceasta lista
+    coefficients_copy = np.copy(coefficients)
 
     initial_reconstruction_value = None
     # parcurgem lista de coeficienti si identificam tipul fiecarei valori
     for index, coefficient in enumerate(coefficients):
         # coeficientul are valoarea infinit daca se doreste ca acesta sa nu mai fie parcurs
         # cu alte cuvinte, cazul in care este descendentul unui ZeroTreeRoot
-        if coefficient == np.Inf: continue
+        if coefficient == np.Inf : continue
 
         # identificam linia si coloana pe care se afla coeficientul curent
         coef_row, coef_cols = GetRowAndColumnByIndex(index, rows, cols)
 
         # determinam tipul coeficientului dupa valoarea
-        if abs(coefficient) > threshold:
-            candidate, initial_reconstruction_value = HandleSignificantCoefficient(coefficient, initial_reconstruction_value, threshold)
-        else:
-            candidate = HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold)
+        if coefficient != 0:
+            if abs(coefficient) > threshold:
+                candidate, initial_reconstruction_value = HandleSignificantCoefficient(coefficient, initial_reconstruction_value, threshold)
 
-        # adaugam coeficientul curent in lista
-        dominantList.append(candidate)
+                # setam acest coeficient cu valoarea 0 in lista de coeficienti astfel incat, la urmatorul pas dominant sa fie ignorati
+                coefficients_copy[index] = 0
+            else:
+                candidate = HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold)
 
-    return dominantList
+            # adaugam coeficientul curent in lista
+            dominantList.append(candidate)
+
+    return dominantList, coefficients_copy
 
 # functie care returneaza coeficientii significati rezultati in urma primului pas dominant
 # determinarea acestora se face pe baza atributului "Symbol" din clasa ce defineste coeficientul
@@ -236,7 +239,10 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
 
     # parcurgem descendentii si verificam statusul lor
     subbands = []
-    current_level = decomposition_levels - int(np.floor(math.log(index, 4)))
+    # tratam un caz particular al folosirii functiei logaritm (nu se poate calcula log(0))
+    current_level = decomposition_levels
+    if index > 0:
+        current_level -= int(np.floor(math.log(index, 4)))
     if current_level == 1:
         candidate = DominantListItem("subband not defined yet", coefficient)
         candidate.Reconstruction(0)
@@ -301,45 +307,55 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
 # functie care realizeaza subordinate pass (encodarea valorilor rezultate in urma dominant pass)
 # encodarea se face cu 0 si 1 avand in vedere pozitia coeficientului in intervalul de incertitudine
 # de asemenea, se determina noua valoare de reconstructie pentru fiecare coeficient avand in vedere pozitia in intervalul de incertitudine
-def SubordinatePass(subordonateList, threshold):
+def SubordinatePass(subordonateList, threshold, iteration):
     # definim intervalul de incertitudine : [Threshold, 2 * Threshold)
-    uncertaintyInterval = [threshold, 2 * threshold]
-
-    # definim valoarea decizionala a intervalului de incertitudine : (Threshold + 2 * Threshold) / 2
-    decisionalValue = int((uncertaintyInterval[0] + uncertaintyInterval[1]) / 2)
+    uncertaintyInterval = GetUncertaintyIntervals(iteration, threshold)
 
     # parcurgem lista de coeficienti significanti si codificam in raport cu decisionalValue
     for subordonate in subordonateList:
-        coefficientMagnitude = subordonate.coefficient
-        # valoarea decizionala va imparti intervalul de incertitudine in 2 subintervale
-        # daca coeficientul se afla in primul interval (lower), va fi encodat cu 0
-        # daca coeficientul se afla in al doilea interval (upper), va fi encodat cu 1
-        encodingValue = int(abs(coefficientMagnitude) / decisionalValue)
-
-        # setam valoarea de encodare pentru coeficient
-        subordonate.EncodingSymbol(encodingValue)
+        coefficientMagnitude = abs(subordonate.coefficient)
 
 
-        # determinam noua valoarea de reconstructie a coeficientului, avand in vedere valoarea de encodare
-        # valoarea de reconstructie se calculeaza ca media dintre valoarea decizionala si valoarea limita corespunzatoare pozitiei in interval
-        reconstructionMagnitude = decisionalValue
-        if encodingValue == 0:
-            reconstructionMagnitude = int((reconstructionMagnitude + uncertaintyInterval[0]) / 2)
-        elif encodingValue == 1:
-            reconstructionMagnitude = int((reconstructionMagnitude + uncertaintyInterval[1]) / 2)
-        else:
-            raise Exception("Invalid Encoding Value")
+        for index, interval in enumerate(uncertaintyInterval):
+            if coefficientMagnitude >= interval[0] and coefficientMagnitude < interval[1]:
+                # valoarea decizionala va imparti intervalul de incertitudine in 2 subintervale
+                # daca coeficientul se afla in primul interval (lower), va fi encodat cu 0
+                # daca coeficientul se afla in al doilea interval (upper), va fi encodat cu 1
+                intervalMiddle = int((interval[0] + interval[1]) / 2)
 
-        # setam noua valoare de reconstructie pentru coeficient
-        subordonate.Reconstruction(reconstructionMagnitude)
+                # determinam noua valoarea de reconstructie a coeficientului, avand in vedere valoarea de encodare
+                # valoarea de reconstructie se calculeaza ca media dintre valoarea decizionala si valoarea limita corespunzatoare pozitiei in interval
+                if coefficientMagnitude >= intervalMiddle:
+                    reconstructionMagnitude = int((intervalMiddle + interval[1]) / 2)
+                    encodingValue = 1
+                else:
+                    reconstructionMagnitude = int((intervalMiddle + interval[0]) / 2)
+                    encodingValue = 0
+
+                # setam valoarea de encodare pentru coeficient
+                subordonate.EncodingSymbol(encodingValue)
+
+                # setam noua valoare de reconstructie pentru coeficient
+                subordonate.Reconstruction(reconstructionMagnitude)
 
         # setam valoarea coeficientului ca fiind modulul acestuia
         subordonate.coefficient = abs(subordonate.coefficient)
 
     # sortam descrescator coeficientii din lista subordonata, in functie de valoarea de reconstructie
     subordonateList = SortByAttribute(subordonateList, "reconstruction")
-
     return subordonateList
 
 
-
+# functie care returneaza intervalele de incertitudine specifice unei iteratii a procesului de identificare a tipurilor coeficientilor
+def GetUncertaintyIntervals(iteration, initialThreshold):
+    uncertaintyInterval = [initialThreshold, 2 * initialThreshold]
+    auxDecisionalValue = uncertaintyInterval[1]
+    intervals = []
+    for iter in range(iteration + 1):
+        lower = int(uncertaintyInterval[0] / np.power(2, iter))
+        upper = auxDecisionalValue
+        decisionalValue = int((lower + upper) / 2)
+        auxDecisionalValue = decisionalValue
+        intervals.append([lower, decisionalValue])
+        intervals.append([decisionalValue, upper])
+    return ListToSet(intervals)
