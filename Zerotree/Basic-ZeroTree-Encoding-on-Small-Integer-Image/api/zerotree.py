@@ -14,6 +14,7 @@ class DominantListItem:
     def __init__(self, subband, coefficient):
         self.Subband(subband)
         self.Coefficient(coefficient)
+        self.encoding = -1
 
     def Subband(self, subband : str):
         self.subband : str = subband
@@ -29,8 +30,14 @@ class DominantListItem:
     def Reconstruction(self, reconstruction : int):
         self.reconstruction = reconstruction
 
+    def EncodingSymbol(self, encoding : int):
+        if encoding == 0 or encoding == 1:
+            self.encoding = encoding
+        else:
+            raise Exception("Invalid Encoding Value")
+
     def __str__(self):
-        return f"Coefficient [{self.coefficient}] === Symbol [{self.symbol}] === Reconstruction [{self.reconstruction}]"
+        return f"Coefficient [{self.coefficient}] === Symbol [{self.symbol}] === Reconstruction [{self.reconstruction}] === Encoding [{self.encoding}]"
 
 # Threshold-ul initial se alege astfel incat sa fie mai mare decat jumatatea maximului valorilor absolute ale coeficientilor
 # T0 > |Xj| / 2 (unde Xj, reprezinta oricare dintre coeficienti)
@@ -184,21 +191,13 @@ def DominantPass(image, decomposition_levels, threshold):
         # adaugam coeficientul curent in lista
         dominantList.append(candidate)
 
-    for el in dominantList:
-        print(el)
-    print("#########################################")
-    significants = IdentifySignificants(dominantList)
-    for el in significants:
-        print(el)
-
-
+    return dominantList
 
 # functie care returneaza coeficientii significati rezultati in urma primului pas dominant
 # determinarea acestora se face pe baza atributului "Symbol" din clasa ce defineste coeficientul
 def IdentifySignificants(dominantList):
     significant_identifiers = ["POS", "NEG"]
     return list(filter(lambda element : element.symbol in significant_identifiers, dominantList))
-
 
 # functie pentru tratarea unui coeficient significant
 def HandleSignificantCoefficient(coefficient, initial_reconstruction_value, threshold):
@@ -298,3 +297,49 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
                 idx += 1
 
     return candidate
+
+# functie care realizeaza subordinate pass (encodarea valorilor rezultate in urma dominant pass)
+# encodarea se face cu 0 si 1 avand in vedere pozitia coeficientului in intervalul de incertitudine
+# de asemenea, se determina noua valoare de reconstructie pentru fiecare coeficient avand in vedere pozitia in intervalul de incertitudine
+def SubordinatePass(subordonateList, threshold):
+    # definim intervalul de incertitudine : [Threshold, 2 * Threshold)
+    uncertaintyInterval = [threshold, 2 * threshold]
+
+    # definim valoarea decizionala a intervalului de incertitudine : (Threshold + 2 * Threshold) / 2
+    decisionalValue = int((uncertaintyInterval[0] + uncertaintyInterval[1]) / 2)
+
+    # parcurgem lista de coeficienti significanti si codificam in raport cu decisionalValue
+    for subordonate in subordonateList:
+        coefficientMagnitude = subordonate.coefficient
+        # valoarea decizionala va imparti intervalul de incertitudine in 2 subintervale
+        # daca coeficientul se afla in primul interval (lower), va fi encodat cu 0
+        # daca coeficientul se afla in al doilea interval (upper), va fi encodat cu 1
+        encodingValue = int(abs(coefficientMagnitude) / decisionalValue)
+
+        # setam valoarea de encodare pentru coeficient
+        subordonate.EncodingSymbol(encodingValue)
+
+
+        # determinam noua valoarea de reconstructie a coeficientului, avand in vedere valoarea de encodare
+        # valoarea de reconstructie se calculeaza ca media dintre valoarea decizionala si valoarea limita corespunzatoare pozitiei in interval
+        reconstructionMagnitude = decisionalValue
+        if encodingValue == 0:
+            reconstructionMagnitude = int((reconstructionMagnitude + uncertaintyInterval[0]) / 2)
+        elif encodingValue == 1:
+            reconstructionMagnitude = int((reconstructionMagnitude + uncertaintyInterval[1]) / 2)
+        else:
+            raise Exception("Invalid Encoding Value")
+
+        # setam noua valoare de reconstructie pentru coeficient
+        subordonate.Reconstruction(reconstructionMagnitude)
+
+        # setam valoarea coeficientului ca fiind modulul acestuia
+        subordonate.coefficient = abs(subordonate.coefficient)
+
+    # sortam descrescator coeficientii din lista subordonata, in functie de valoarea de reconstructie
+    subordonateList = SortByAttribute(subordonateList, "reconstruction")
+
+    return subordonateList
+
+
+

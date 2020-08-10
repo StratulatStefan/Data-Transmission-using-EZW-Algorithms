@@ -19,4 +19,23 @@ if __name__ == "__main__":
                    [  5,    11,     5,     6,     0,     3,    -4,     4]), np.int32)
 
     T0 = GetInitialThreshold(DWT)
-    DominantPass(DWT, 3, T0)
+
+    # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
+    dominantList = DominantPass(DWT, 3, T0)
+
+    # Extragem lista subordonata, care contine coeficientii care au fost determinati ca fiind significant in urma pasului dominant
+    subordinateList = IdentifySignificants(dominantList)
+
+    # pastram doar valorile insignificante in dominantList, intrucat urmatorul pas dominant va parcurge doar aceste valori (insignificante)
+    # dominantList contine valorile significante, care se afla si in subordonateList
+    # asadar, pentru a determina valorile insignificante, facem diferenta celor doua liste
+    dominantList = ListsDifference(dominantList, subordinateList)
+
+    # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudin, Te
+    subordinateList = SubordinatePass(subordinateList, T0)
+
+    ####################################################################################################################
+    # in acest punct, in subordonateList avem valorile significante, codificate si avand noua valoare de reconstructie #
+    # iar in dominantList avem acele valori care nu au fost inca descoperite ca fiind significante                     #
+    # doar asupra acestor valori se va realiza mai departe pasul dominant                                              #
+    ####################################################################################################################

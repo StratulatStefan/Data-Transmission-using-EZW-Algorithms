@@ -90,3 +90,17 @@ def SearchStringInList(candidates, string):
 
 ##########################################################################################
 
+# functie care sorteaza o lista de obiecte avand drept criteriu un atribut al clasei
+def SortByAttribute(objects, criteria):
+    return sorted(objects, key = lambda object : ClassAttributeByString(object, criteria), reverse = True)
+
+##########################################################################################
+
+# functie lambda care returneaza atributul unui obiect dupa nume (dat ca string)
+ClassAttributeByString = lambda object, criteria : getattr(object, criteria)
+
+##########################################################################################
+
+# functie care realizeaza diferenta a doua liste (listA - listB)
+def ListsDifference(listA, listB):
+    return list(filter(lambda candidate : candidate not in listB, listA))
