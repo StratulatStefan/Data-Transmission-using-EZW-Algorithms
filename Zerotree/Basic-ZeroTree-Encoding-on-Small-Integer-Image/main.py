@@ -29,40 +29,31 @@ if __name__ == "__main__":
     stop = time.perf_counter_ns()
     print(f"Timp in microsecunde : {(stop - start) / 1e3}")
 
-    T0 = GetInitialThreshold(DWT)
+    threshold = GetInitialThreshold(DWT)
 
-    # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
-    dominantList, coefficients = DominantPass(coefficients, (rows, cols), 3, T0)
+    loops = 4
+    subordinateList = []
+    for loop in range(loops):
+        # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
+        dominantList, coefficients = DominantPass(coefficients, (rows, cols), 3, int(threshold / np.power(2, loop)))
 
-    # Extragem lista subordonata, care contine coeficientii care au fost determinati ca fiind significant in urma pasului dominant
-    subordinateList = IdentifySignificants(dominantList)
+        # Extragem lista subordonata, care contine coeficientii care au fost determinati ca fiind significant in urma pasului dominant
+        auxiliary = IdentifySignificants(dominantList)
+        for aux in auxiliary:
+            subordinateList.append(aux)
 
-    # pastram doar valorile insignificante in dominantList, intrucat urmatorul pas dominant va parcurge doar aceste valori (insignificante)
-    # dominantList contine valorile significante, care se afla si in subordonateList
-    # asadar, pentru a determina valorile insignificante, facem diferenta celor doua liste
-    dominantList = ListsDifference(dominantList, subordinateList)
+        # pastram doar valorile insignificante in dominantList, intrucat urmatorul pas dominant va parcurge doar aceste valori (insignificante)
+        # dominantList contine valorile significante, care se afla si in subordonateList
+        # asadar, pentru a determina valorile insignificante, facem diferenta celor doua liste
+        dominantList = ListsDifference(dominantList, subordinateList)
 
-    # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudin, Te
-    subordinateList0 = SubordinatePass(subordinateList, T0, 0)
+        # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
+        subordinateList = SubordinatePass(subordinateList, threshold, loop)
 
-    ####################################################################################################################
-    # in acest punct, in subordonateList avem valorile significante, codificate si avand noua valoare de reconstructie #
-    # iar in dominantList avem acele valori care nu au fost inca descoperite ca fiind significante                     #
-    # doar asupra acestor valori se va realiza mai departe pasul dominant                                              #
-    ####################################################################################################################
-
-    # determinam noul threshold ca jumatatea primului threshold
-    T1 = int(T0/2)
-
-    dominantList, coefficients = DominantPass(coefficients, (rows, cols), 3, T1)
-    subordinateList = IdentifySignificants(dominantList)
-    for element in subordinateList:
-        subordinateList0.append(element)
-    dominantList = ListsDifference(dominantList, subordinateList)
-    subordinateList = SubordinatePass(subordinateList0, T0, 1)
-
-
-    printList(subordinateList0)
-    print("xxxxxxxxxxxxxxxxxx")
-    printList(dominantList)
+        print("#############################################")
+        print(f"Loop {loop + 1}")
+        printList(dominantList)
+        print("xxxxxx")
+        printList(subordinateList)
+        print("\n\n")
 

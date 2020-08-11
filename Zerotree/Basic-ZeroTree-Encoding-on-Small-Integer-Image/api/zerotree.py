@@ -317,7 +317,7 @@ def SubordinatePass(subordonateList, threshold, iteration):
 
 
         for index, interval in enumerate(uncertaintyInterval):
-            if coefficientMagnitude >= interval[0] and coefficientMagnitude < interval[1]:
+            if coefficientMagnitude >= interval[0] and coefficientMagnitude <= interval[1]:
                 # valoarea decizionala va imparti intervalul de incertitudine in 2 subintervale
                 # daca coeficientul se afla in primul interval (lower), va fi encodat cu 0
                 # daca coeficientul se afla in al doilea interval (upper), va fi encodat cu 1
@@ -347,15 +347,26 @@ def SubordinatePass(subordonateList, threshold, iteration):
 
 
 # functie care returneaza intervalele de incertitudine specifice unei iteratii a procesului de identificare a tipurilor coeficientilor
-def GetUncertaintyIntervals(iteration, initialThreshold):
+def GetUncertaintyIntervals(iterations, initialThreshold):
     uncertaintyInterval = [initialThreshold, 2 * initialThreshold]
-    auxDecisionalValue = uncertaintyInterval[1]
-    intervals = []
-    for iter in range(iteration + 1):
-        lower = int(uncertaintyInterval[0] / np.power(2, iter))
-        upper = auxDecisionalValue
-        decisionalValue = int((lower + upper) / 2)
-        auxDecisionalValue = decisionalValue
-        intervals.append([lower, decisionalValue])
-        intervals.append([decisionalValue, upper])
-    return ListToSet(intervals)
+    if iterations == 0 : return ListToSet([uncertaintyInterval])
+    intervals = [uncertaintyInterval]
+    final = []
+    for iteration in range(iterations):
+        if iteration > 0 : final = []
+        for interval in intervals:
+            middle = int((interval[0] + interval[1]) / 2)
+            final.append([interval[0], middle])
+            final.append([middle, interval[1]])
+        current_lower = int(initialThreshold / np.power(2, iteration + 1))
+        current_upper = 2 * current_lower
+        final.append([current_lower, current_upper])
+        if iteration + 1 < iterations:
+            intervals = []
+            for fn in final:
+                intervals.append(fn)
+    return ListToSet(final)
+
+
+
+
