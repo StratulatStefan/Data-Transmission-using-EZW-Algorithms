@@ -34,10 +34,44 @@ def MultiThread_ScratchDWTComputeRCWT(image, wavelet_type):
 
     final = ImageRecompose(tmp)
     rows, cols = map(lambda x : int(x/2), final.shape)
+    LL, (HL, LH, HH) = pywt.dwt2(image, 'db2')
+    rows, cols = LL.shape
+    xxxx = 8
+    counterbig = 512 * 512
+    counter = 0
+    for i in range(rows):
+        for j in range(cols):
+            if abs(LL[i, j]) < xxxx:
+                LL[i, j] = 0
+            else:
+                counter += 1
+    for i in range(rows):
+        for j in range(cols):
+            if abs(LH[i, j]) < xxxx:
+                LH[i, j] = 0
+            else:
+                counter += 1
+    for i in range(rows):
+        for j in range(cols):
+            if abs(HL[i, j]) < xxxx:
+                HL[i, j] = 0
+            else:
+                counter += 1
+    for i in range(rows):
+        for j in range(cols):
+            if abs(HH[i, j]) < xxxx:
+                HH[i, j] = 0
+            else:
+                counter += 1
+    print(f"total : {counterbig}  obtinut : {counter}   raport : {counterbig / counter}")
+    '''
     LL = final[:rows, :cols]
     HL = final[:rows, cols:]
     LH = final[rows:, :cols]
     HH = final[rows:, cols:]
+    '''
+    xx = pywt.idwt2((LL,(HL, LH, HH)),'db2')
+    Plot(xx, 221, "Asdasasasd")
     return LL, (LH, HL, HH)
 
 # functie care realizeaza descompunerea imaginii folosind wavelets

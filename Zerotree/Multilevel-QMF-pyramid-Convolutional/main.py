@@ -21,6 +21,7 @@ if __name__ == "__main__":
         print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
         print("----------------------------------------\n")
 
+        '''
         start = time.time_ns()
         print("----------Multi Thread Level 2----------")
         decomposition_level_2 = WaveletDecomposition(decomposition_level_1['Aproximation LL'], QMF_5_tap_symmetric, MultiThread_ScratchDWTComputeRCWT)
@@ -34,12 +35,13 @@ if __name__ == "__main__":
         stop = time.time_ns()
         print(f"Timpul necesar ex : {(stop - start) / 1e9} s")
         print("----------------------------------------\n")
+        '''
     except Exception as exc:
         BasicException(exc)
 
     # plotam rezultatele obtinute
     PlotDWT(decomposition_level_1, 0)
-    PlotDWT(decomposition_level_2, 1)
-    PlotDWT(decomposition_level_3, 2)
+    #PlotDWT(decomposition_level_2, 1)
+    #PlotDWT(decomposition_level_3, 2)
 
     pyplot.show()
