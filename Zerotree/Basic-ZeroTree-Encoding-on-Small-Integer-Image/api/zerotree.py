@@ -183,7 +183,7 @@ def DominantPass(coefficients, coordinates, decomposition_levels, threshold):
 
         # determinam tipul coeficientului dupa valoarea
         if coefficient != 0:
-            if abs(coefficient) > threshold:
+            if abs(coefficient) >= threshold:
                 candidate, initial_reconstruction_value = HandleSignificantCoefficient(coefficient, initial_reconstruction_value, threshold)
 
                 # setam acest coeficient cu valoarea 0 in lista de coeficienti astfel incat, la urmatorul pas dominant sa fie ignorati
@@ -334,15 +334,16 @@ def SubordinatePass(subordonateList, threshold, iteration):
 
                 # setam valoarea de encodare pentru coeficient
                 subordonate.EncodingSymbol(encodingValue)
+                sign = -1 if subordonate.coefficient < 0 else 1
 
                 # setam noua valoare de reconstructie pentru coeficient
-                subordonate.Reconstruction(reconstructionMagnitude)
+                subordonate.Reconstruction(sign * reconstructionMagnitude)
 
         # setam valoarea coeficientului ca fiind modulul acestuia
-        subordonate.coefficient = abs(subordonate.coefficient)
+        #subordonate.coefficient = abs(subordonate.coefficient)
 
     # sortam descrescator coeficientii din lista subordonata, in functie de valoarea de reconstructie
-    subordonateList = SortByAttribute(subordonateList, "reconstruction")
+    #subordonateList = SortByAttribute(subordonateList, "reconstruction")
     return subordonateList
 
 
@@ -367,6 +368,34 @@ def GetUncertaintyIntervals(iterations, initialThreshold):
                 intervals.append(fn)
     return ListToSet(final)
 
+finalList = []
+def GenerateSequenceToSend(dominant, subordinate):
+    dominants = ["IZ", "Z", "ZTR"]
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    for el in finalList:
+        print(el)
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    for el in dominant:
+        print(el)
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    for el in subordinate:
+        print(el)
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+
+    if finalList != []:
+        zeros = len(list(filter(lambda value: value.symbol in dominants, finalList)))
+        finalList_copy = copy.deepcopy(finalList)
+        for i in range(zeros):
+            first_candidate_index = FirstOccurence(finalList_copy, "symbol", dominants)
+            finalList_copy[first_candidate_index] = None
+            finalList[first_candidate_index] = copy.deepcopy(dominant[0])
+            dominant = dominant[1:]
+    for el in dominant:
+        finalList.append(el)
+    for el in finalList:
+        print(el)
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    print("\n\n")
 
 
 

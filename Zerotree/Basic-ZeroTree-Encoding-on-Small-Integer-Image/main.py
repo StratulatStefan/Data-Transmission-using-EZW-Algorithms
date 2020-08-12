@@ -1,4 +1,5 @@
 from api.zerotree import *
+from matplotlib import pyplot
 import time
 
 # acest script nu are ca scop observarea de rezultate vizuale in termeni de imagini, ci doar de valori
@@ -18,29 +19,36 @@ if __name__ == "__main__":
                    [  2,    -3,     6,    -4,     3,     6,     3,     6],
                    [  5,    11,     5,     6,     0,     3,    -4,     4]), np.int32)
 
-
+    DWT = np.array(([26,    6,   13,   10],
+                    [-7,    7,    6,    4],
+                    [ 4,   -4,    4,   -3],
+                    [ 2,   -2,   -2,    1]), np.int32)
+    decomposition_levels = 2
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
 
     # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
     # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
     start = time.perf_counter_ns()
-    coefficients = ReorganizeMatrix(DWT, 3) # < 100 microsecunde
+    coefficients = ReorganizeMatrix(DWT, decomposition_levels) # < 100 microsecunde
     stop = time.perf_counter_ns()
     print(f"Timp in microsecunde : {(stop - start) / 1e3}")
 
     threshold = GetInitialThreshold(DWT)
 
-    loops = 4
+    loops = 3
     subordinateList = []
     for loop in range(loops):
         # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
-        dominantList, coefficients = DominantPass(coefficients, (rows, cols), 3, int(threshold / np.power(2, loop)))
+        dominantList, coefficients = DominantPass(coefficients, (rows, cols), decomposition_levels, int(threshold / np.power(2, loop)))
 
         # Extragem lista subordonata, care contine coeficientii care au fost determinati ca fiind significant in urma pasului dominant
         auxiliary = IdentifySignificants(dominantList)
         for aux in auxiliary:
             subordinateList.append(aux)
+
+
+        dominantList_copy = np.copy(dominantList)
 
         # pastram doar valorile insignificante in dominantList, intrucat urmatorul pas dominant va parcurge doar aceste valori (insignificante)
         # dominantList contine valorile significante, care se afla si in subordonateList
@@ -50,10 +58,15 @@ if __name__ == "__main__":
         # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
         subordinateList = SubordinatePass(subordinateList, threshold, loop)
 
+        GenerateSequenceToSend(dominantList_copy, subordinateList)
+
         print("#############################################")
+        '''
         print(f"Loop {loop + 1}")
-        printList(dominantList)
-        print("xxxxxx")
         printList(subordinateList)
+        print("xxxxxx")
+        printList(dominantList)
         print("\n\n")
+        '''
+    pyplot.show()
 

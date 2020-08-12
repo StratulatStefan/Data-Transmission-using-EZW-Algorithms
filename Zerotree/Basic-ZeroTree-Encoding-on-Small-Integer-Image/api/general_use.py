@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 import itertools
+import copy
 
 ##########################################################################################
 
@@ -117,3 +118,13 @@ def printList(candidate):
 # functie lambda care converteste o lista de liste la un set de liste
 # folosita pentru eliminarea duplicatelor dintr-o lista de liste
 ListToSet = lambda lists : set(tuple(lst) for lst in lists)
+
+##########################################################################################
+
+# functie care primeste ca parametru o functie de obiecte si returneaza indexul primului obiect din lista al carui parametru indeplineste o conditie data
+def FirstOccurence(items, criterium, values):
+    for index, item in enumerate(items):
+        if item != None:
+            if ClassAttributeByString(item, criterium) in values:
+                return index
+    return -1
