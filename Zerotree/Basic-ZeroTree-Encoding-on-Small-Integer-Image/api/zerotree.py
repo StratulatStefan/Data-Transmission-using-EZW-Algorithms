@@ -406,7 +406,7 @@ def SignificanceMapEncodingConventions():
     possible_values = ["POS", "NEG", "ZTR", "IZ"]
 
     # avem 4 valori deci avem nevoie doar de 2 biti (dorim sa reprezentam valorile 0, 1, 2, 3) (in loc de 24 necesari encodarii stringurilor)
-    return {"IZ" : 0, "ZTR" : 1, "POS" : 2, "NEG" : 3}
+    return {"IZ" : 0,"Z" : 0, "ZTR" : 1, "POS" : 2, "NEG" : 3}
 
 # functie care codifica lista de coeficienti care va fi trimisa astfel incat sa se reduca nr de biti
 # de ex, in loc sa trimitem string-ul POS (24 de biti), vor realiza o codificare in binar si vom trimite doar 3 biti
@@ -414,10 +414,104 @@ def SignificanceMapEncoding(significance_map, encoding_rules):
     # codificam significance map pe baza conventiilor
     return list(map(lambda item : encoding_rules[item], significance_map))
 
+# - functie prin care trimitem significance_map si valorile de recontructie catre decoder
+# - ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti pe baza careia se va realiza
+# imaginea finala
+# - aceasta functie va fi folosita la receptie
+def SendEncodings(size,conventions, significance_map_encoding, reconstruction_values):
+    # recompunem significance_map
+    # extragem toate elemente fara primul (primul este IZ, care este echivalent cu al doilea, care este Z)
+    encoding_bits = list(conventions.values())[1:]
+    encoding_strings = list(conventions.keys())[1:]
+    significance_map = list(map(lambda item : encoding_strings[encoding_bits.index(item)],significance_map_encoding))
 
+    # cream o lista de coeficienti de aceeasi dimensiune cu lista de coeficienti ce a fost encodata
+    coefficients = [-np.inf] * (size[0] * size[1])
+    index = 0
+    for significant in significance_map:
+        if significant in ["POS", "NEG"]:
+            if reconstruction_values != []:
+                coeff = reconstruction_values[0]
+            if len(reconstruction_values) > 1:
+                reconstruction_values = reconstruction_values[1:]
+            else:
+                reconstruction_values = []
+            coefficients[index] = coeff
+        elif significant == "Z":
+            coefficients[index] = 0
+        elif significant == "ZTR":
+            coefficients[index] = 0
+            lower = 4 * index
+            upper = 4 * (index + 1)
+            for idx in range(lower, upper):
+                coefficients[idx] = 0
+        index = index + 1
 
+    recomposed_wavelet_coefs = RecomposeDecodedCoefficients(size, coefficients)
+    print(recomposed_wavelet_coefs)
 
+# functie folosita la receptie
+# aceasta functie primeste ca input lista de coeficienti realizata in urma procesului de decodare si formeaza matricea de coeficienti
+def RecomposeDecodedCoefficients(size, coefficients):
+    # extragem coordonatele dimensionale pe care ar trebui sa le aiba rezultatul
+    rows, cols = size
+    if len(coefficients) != rows * cols:
+        raise Exception("Invalid size of coefficients list!")
 
+    # determinam nr. nivelelor de descompunere
+    decomposition_levels = int(math.log(len(coefficients), 4))
+    levels = []
+    previous_level = 0
+    for dec_level in range(1, decomposition_levels + 1):
+        upper_level = np.power(4, dec_level)
+        if dec_level > 1:
+            i = previous_level
+            idd = dec_level
+            while i < upper_level:
+                j = i
+                print("xxxxxxxx")
+                lvl = []
+                while j < idd * np.power(2, dec_level):
+                    lvl.append(coefficients[j])
+                    j = j + 1
+                i = j
+                idd += 1
+                levels.append(lvl)
+        else:
+            for i in range(0, upper_level):
+                print("xxxxxxxx")
+                levels.append([coefficients[i]])
+        previous_level = upper_level
+    x = 0
+    subbands = ["LL", "HL", "LH", "HH"]
+    final = {}
+    for dec_level in range(decomposition_levels, 0, -1):
+        bands = subbands[1:] if decomposition_levels != dec_level else subbands
+        for subband in bands:
+            coeffs = levels[0]
+            levels = levels[1:]
+            final[f"{subband}{dec_level}"] = coeffs
+    print(levels)
 
+    finalMatrix = np.zeros(size, np.float32)
+    prev_row = 0
+    prev_col = 0
+    for dec_level in range(decomposition_levels, 0, -1):
+        row_level = np.power(2, decomposition_levels - dec_level + 1)
+        col_level = np.power(2, decomposition_levels - dec_level + 1)
+        row_level_half = int(row_level / 2)
+        col_level_half = int(col_level / 2)
 
+        HL = ArrayToSquareMatrix(final[f"HL{dec_level}"])
+        LH = ArrayToSquareMatrix(final[f"LH{dec_level}"])
+        HH = ArrayToSquareMatrix(final[f"HH{dec_level}"])
+        if dec_level == decomposition_levels:
+            LL = ArrayToSquareMatrix(final[f"LL{dec_level}"])
+            finalMatrix[prev_row:row_level_half, prev_col : col_level_half] = LL
+        finalMatrix[:row_level_half, col_level_half:col_level] = HL
+        finalMatrix[col_level_half : col_level, : col_level_half] = LH
+        finalMatrix[col_level_half : col_level, col_level_half:col_level] = HH
 
+        prev_row = row_level
+        prev_col = col_level
+    return finalMatrix

@@ -131,3 +131,13 @@ def FirstOccurence(items, criterium, values):
 
 ##########################################################################################
 
+# functie care transforma un vector de n elemente intr-o matrice de (n/2) x (n/2) elemente
+def ArrayToSquareMatrix(items):
+    if len(items) == 1:
+        return items
+    size = int(len(items)/2)
+    result = np.zeros((size, size), np.float32)
+    for i in range(size):
+        for j in range(size):
+            result[i, j] = items[i * size + j]
+    return result

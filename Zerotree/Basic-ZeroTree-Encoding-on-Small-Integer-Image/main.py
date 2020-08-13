@@ -80,6 +80,11 @@ if __name__ == "__main__":
         # determinarea valorilor de 0 din lista de coeficienti se face pe baza significance map
         # asadar, eliminam coeficientii nuli din lista coeficientilor
         reconstruction_values = list(filter(lambda item : item != 0, reconstruction_values))
+
+        # trimitem significance_map si valorile de recontructie catre decoder
+        # (ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti)
+        print(significance_map)
+        SendEncodings(DWT.shape,significance_map_encoding_conventions, significance_map_encoding, reconstruction_values)
         print("#############################################")
         '''
         print(f"Loop {loop + 1}")
