@@ -182,12 +182,12 @@ def DominantPass(coefficients, coordinates, decomposition_levels, threshold):
         coef_row, coef_cols = GetRowAndColumnByIndex(index, rows, cols)
 
         # determinam tipul coeficientului dupa valoarea
-        if coefficient != 0:
+        if coefficient != -np.inf:
             if abs(coefficient) >= threshold:
                 candidate, initial_reconstruction_value = HandleSignificantCoefficient(coefficient, initial_reconstruction_value, threshold)
 
-                # setam acest coeficient cu valoarea 0 in lista de coeficienti astfel incat, la urmatorul pas dominant sa fie ignorati
-                coefficients_copy[index] = 0
+                # setam acest coeficient cu valoarea -np.inf in lista de coeficienti astfel incat, la urmatorul pas dominant sa fie ignorati
+                coefficients_copy[index] = -np.inf
             else:
                 candidate = HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold)
 

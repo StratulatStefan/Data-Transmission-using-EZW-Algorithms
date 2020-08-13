@@ -22,7 +22,7 @@ if __name__ == "__main__":
     DWT = np.array(([26,    6,   13,   10],
                     [-7,    7,    6,    4],
                     [ 4,   -4,    4,   -3],
-                    [ 2,   -2,   -2,    1]), np.int32)
+                    [ 2,   -2,   -2,    0]), np.int32)
     decomposition_levels = 2
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
