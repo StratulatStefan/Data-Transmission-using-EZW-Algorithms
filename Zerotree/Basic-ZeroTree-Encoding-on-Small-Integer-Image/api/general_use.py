@@ -135,7 +135,7 @@ def FirstOccurence(items, criterium, values):
 def ArrayToSquareMatrix(items):
     if len(items) == 1:
         return items
-    size = int(len(items)/2)
+    size = int(np.sqrt(len(items)))
     result = np.zeros((size, size), np.float32)
     for i in range(size):
         for j in range(size):

@@ -18,14 +18,14 @@ if __name__ == "__main__":
                    [  3,     0,    -3,     2,     3,    -2,     0,     4],
                    [  2,    -3,     6,    -4,     3,     6,     3,     6],
                    [  5,    11,     5,     6,     0,     3,    -4,     4]), np.int32)
-
-    DWT = np.array(([26,    6,   13,   10],
+    DWTs = np.array(([26,    6,   13,   10],
                     [-7,    7,    6,    4],
                     [ 4,   -4,    4,   -3],
                     [ 2,   -2,   -2,    0]), np.int32)
-    decomposition_levels = 2
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
+    decomposition_levels = int(math.log(rows * cols, 4))
+
 
     # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
     # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
@@ -57,7 +57,6 @@ if __name__ == "__main__":
 
         # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
         subordinateList = SubordinatePass(subordinateList, threshold, loop)
-
         # Observatie ! In mod obisnuit, dominantList_copy ar trebui sa contina valorile rezultate din pasul dominant (fara a tine cont de valorile
         # de reconstructie rezultate din pasul subordonat)
         # Insa, elementele significate cu valorile de reconstructie modificate rezultate din pasul subordonat sunt referinte la elementele din dominant List
@@ -84,7 +83,7 @@ if __name__ == "__main__":
         # trimitem significance_map si valorile de recontructie catre decoder
         # (ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti)
         print(significance_map)
-        SendEncodings(DWT.shape,significance_map_encoding_conventions, significance_map_encoding, reconstruction_values)
+        x = SendEncodings(DWT.shape,significance_map_encoding_conventions, significance_map_encoding, reconstruction_values)
         print("#############################################")
         '''
         print(f"Loop {loop + 1}")

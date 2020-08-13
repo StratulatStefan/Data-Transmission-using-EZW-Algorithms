@@ -418,6 +418,7 @@ def SignificanceMapEncoding(significance_map, encoding_rules):
 # - ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti pe baza careia se va realiza
 # imaginea finala
 # - aceasta functie va fi folosita la receptie
+# repara aici!
 def SendEncodings(size,conventions, significance_map_encoding, reconstruction_values):
     # recompunem significance_map
     # extragem toate elemente fara primul (primul este IZ, care este echivalent cu al doilea, care este Z)
@@ -427,8 +428,10 @@ def SendEncodings(size,conventions, significance_map_encoding, reconstruction_va
 
     # cream o lista de coeficienti de aceeasi dimensiune cu lista de coeficienti ce a fost encodata
     coefficients = [-np.inf] * (size[0] * size[1])
+    decomposition_level = int(math.log(size[0] * size[1], 4))
     index = 0
     for significant in significance_map:
+        current_level = 3 if index == 0 else decomposition_level - int(math.log(index, 4))
         if significant in ["POS", "NEG"]:
             if reconstruction_values != []:
                 coeff = reconstruction_values[0]
@@ -440,15 +443,28 @@ def SendEncodings(size,conventions, significance_map_encoding, reconstruction_va
         elif significant == "Z":
             coefficients[index] = 0
         elif significant == "ZTR":
-            coefficients[index] = 0
-            lower = 4 * index
-            upper = 4 * (index + 1)
-            for idx in range(lower, upper):
-                coefficients[idx] = 0
-        index = index + 1
-
+            for level in range(current_level - 1):
+                coefficients[index] = 0
+                if current_level == decomposition_level:
+                    lower = np.power(4, level + 1) * index
+                    upper = np.power(4, level + 1) * (index + 1)
+                    for idx in range(lower, upper):
+                        coefficients[idx] = 0
+                else:
+                    divizor = index % np.power(4, current_level) - 4
+                    step = int(np.power(int(4 / 2), decomposition_level - current_level))
+                    inferior_limit_0 = np.power(4, current_level) + int(4/2) * (divizor) + 4 * int(divizor / 2)
+                    superior_limit_0 = inferior_limit_0 + step
+                    inferior_limit_1 = inferior_limit_0 + np.power(4, current_level - 1)
+                    superior_limit_1 = inferior_limit_1 + step
+                    for idx in range(inferior_limit_0, superior_limit_0):
+                        coefficients[idx] = 0
+                    for idx in range(inferior_limit_1, superior_limit_1):
+                        coefficients[idx] = 0
+        if -np.inf in coefficients:
+            index = coefficients.index(-np.inf)
     recomposed_wavelet_coefs = RecomposeDecodedCoefficients(size, coefficients)
-    print(recomposed_wavelet_coefs)
+    return recomposed_wavelet_coefs
 
 # functie folosita la receptie
 # aceasta functie primeste ca input lista de coeficienti realizata in urma procesului de decodare si formeaza matricea de coeficienti
@@ -469,9 +485,10 @@ def RecomposeDecodedCoefficients(size, coefficients):
             idd = dec_level
             while i < upper_level:
                 j = i
-                print("xxxxxxxx")
                 lvl = []
-                while j < idd * np.power(2, dec_level):
+                upper_limit = j + np.power(4, dec_level - 1)
+                #while j < idd * np.power(2, dec_level):
+                while j < upper_limit:
                     lvl.append(coefficients[j])
                     j = j + 1
                 i = j
@@ -479,7 +496,6 @@ def RecomposeDecodedCoefficients(size, coefficients):
                 levels.append(lvl)
         else:
             for i in range(0, upper_level):
-                print("xxxxxxxx")
                 levels.append([coefficients[i]])
         previous_level = upper_level
     x = 0
@@ -491,7 +507,6 @@ def RecomposeDecodedCoefficients(size, coefficients):
             coeffs = levels[0]
             levels = levels[1:]
             final[f"{subband}{dec_level}"] = coeffs
-    print(levels)
 
     finalMatrix = np.zeros(size, np.float32)
     prev_row = 0
