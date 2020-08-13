@@ -58,8 +58,28 @@ if __name__ == "__main__":
         # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
         subordinateList = SubordinatePass(subordinateList, threshold, loop)
 
-        GenerateSequenceToSend(dominantList_copy, subordinateList)
+        # Observatie ! In mod obisnuit, dominantList_copy ar trebui sa contina valorile rezultate din pasul dominant (fara a tine cont de valorile
+        # de reconstructie rezultate din pasul subordonat)
+        # Insa, elementele significate cu valorile de reconstructie modificate rezultate din pasul subordonat sunt referinte la elementele din dominant List
+        # de acelasi tip.
+        # Asadar, cand se efectueaza pasul subordonat, valorile significante din dominantList_copy capata noile valori.
+        # Din acest motiv, este suficient sa furnizam doar dominantList_copy, fara a furniza si valorile din subordonate List (se afla deja in dominantList_copy)
+        sendList = GenerateSequenceToSend(dominantList_copy)
 
+        # formatul listei de trimis [[significante_map_element, reconstruction_value]...]
+        # extragem significance_map si lista valorilor de reconstructie pentru encodare si trimitere separata
+        significance_map =  list(map(lambda item : item[0], sendList))
+        reconstruction_values = list(map(lambda item : item[1], sendList))
+
+        # determinam conventiile de codificare a significance map (vor fi trimise inainte de imagine pentru ca decodorul sa stie cum sa interpreteze rezultatele)
+        significance_map_encoding_conventions = SignificanceMapEncodingConventions()
+
+        # codificam valorile de trimis astfel incat sa reducem nr. de biti necesari
+        significance_map_encoding = SignificanceMapEncoding(significance_map, significance_map_encoding_conventions)
+
+        # determinarea valorilor de 0 din lista de coeficienti se face pe baza significance map
+        # asadar, eliminam coeficientii nuli din lista coeficientilor
+        reconstruction_values = list(filter(lambda item : item != 0, reconstruction_values))
         print("#############################################")
         '''
         print(f"Loop {loop + 1}")

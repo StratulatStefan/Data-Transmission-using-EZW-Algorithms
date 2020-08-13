@@ -315,7 +315,6 @@ def SubordinatePass(subordonateList, threshold, iteration):
     for subordonate in subordonateList:
         coefficientMagnitude = abs(subordonate.coefficient)
 
-
         for index, interval in enumerate(uncertaintyInterval):
             if coefficientMagnitude >= interval[0] and coefficientMagnitude <= interval[1]:
                 # valoarea decizionala va imparti intervalul de incertitudine in 2 subintervale
@@ -368,34 +367,57 @@ def GetUncertaintyIntervals(iterations, initialThreshold):
                 intervals.append(fn)
     return ListToSet(final)
 
+# - functie care genereaza lista de valori care vor fi trimise
+# lista valorilor de trimis se genereaza pe baza listei dominante
+# lista dominanta ca contine, atat valorile insignificante, cat si cele significante, cu noua valoare de reconstructie
+# - se va folosi o lista globala pentru a retine lista acestor valori care vor fi trimise, intrucat o noua iteratie de descompunere
+# depinde de iteratia anterioara (de valorile ce exista deja in lista)
 finalList = []
-def GenerateSequenceToSend(dominant, subordinate):
+def GenerateSequenceToSend(dominant):
     dominants = ["IZ", "Z", "ZTR"]
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    for el in finalList:
-        print(el)
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    for el in dominant:
-        print(el)
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    for el in subordinate:
-        print(el)
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-
+    # daca finalList este o lista goala, atunci suntem in prima iteratie de descompunere
+    # in acest caz, valorile din lista dominanta vor fi adaugate in finalList
     if finalList != []:
+        # suntem intr-o iteratie > 1
+        # se analizeaza finalList iar valorile din lista dominanta se scriu peste valorile din finalList care au simbolul "IZ", "ZTR" sau "Z"
+        # numaram cate elemente de acest tip exista in lista ("IZ", "ZTR" sau "Z")
         zeros = len(list(filter(lambda value: value.symbol in dominants, finalList)))
+
+        # realizam o copie profunda a listei
         finalList_copy = copy.deepcopy(finalList)
+
+        # fiecare valoare de tip Zeros este inlocuita de cate un element din dominant List
         for i in range(zeros):
             first_candidate_index = FirstOccurence(finalList_copy, "symbol", dominants)
             finalList_copy[first_candidate_index] = None
             finalList[first_candidate_index] = copy.deepcopy(dominant[0])
             dominant = dominant[1:]
+    # adaugam restul elementelor din dominant List in finalList
     for el in dominant:
         finalList.append(el)
-    for el in finalList:
-        print(el)
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    print("\n\n")
+
+    # returnam doar datele care trebuie transmise (nu avem nevoie de tot obiectul, ci doar de atributele symbol si valoarea de reconstructie
+    return list(map(lambda coefficient : [coefficient.symbol, coefficient.reconstruction], finalList))
+
+# functie ce genereaza conventiile de encodare a significance_map
+def SignificanceMapEncodingConventions():
+    # lista valorilor posibile din significance_map
+    # "IZ" si "Z" sunt echivalente dpv. al rezultatului final (ambele reprezinta o valoare izolata de 0)
+    possible_values = ["POS", "NEG", "ZTR", "IZ"]
+
+    # avem 4 valori deci avem nevoie doar de 2 biti (dorim sa reprezentam valorile 0, 1, 2, 3) (in loc de 24 necesari encodarii stringurilor)
+    return {"IZ" : 0, "ZTR" : 1, "POS" : 2, "NEG" : 3}
+
+# functie care codifica lista de coeficienti care va fi trimisa astfel incat sa se reduca nr de biti
+# de ex, in loc sa trimitem string-ul POS (24 de biti), vor realiza o codificare in binar si vom trimite doar 3 biti
+def SignificanceMapEncoding(significance_map, encoding_rules):
+    # codificam significance map pe baza conventiilor
+    return list(map(lambda item : encoding_rules[item], significance_map))
+
+
+
+
+
 
 
 

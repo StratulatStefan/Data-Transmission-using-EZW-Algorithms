@@ -128,3 +128,6 @@ def FirstOccurence(items, criterium, values):
             if ClassAttributeByString(item, criterium) in values:
                 return index
     return -1
+
+##########################################################################################
+
