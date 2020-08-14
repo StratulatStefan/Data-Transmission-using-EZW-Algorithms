@@ -164,6 +164,13 @@ def DominantPass(coefficients, coordinates, decomposition_levels, threshold):
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = coordinates
 
+    # determinam limitele superioare ale subbenzilor coresp. listei de coeficienti si nivelurilor de descompunere
+    subbands_upper_limits = []
+    coefs_len = len(coefficients)
+    for level in range(decomposition_levels):
+        subbands_upper_limits.append(int(coefs_len/np.power(4, decomposition_levels - level - 1)))
+
+
     # cream lista da valori dominante
     dominantList = []
 
@@ -189,7 +196,7 @@ def DominantPass(coefficients, coordinates, decomposition_levels, threshold):
                 # setam acest coeficient cu valoarea -np.inf in lista de coeficienti astfel incat, la urmatorul pas dominant sa fie ignorati
                 coefficients_copy[index] = -np.inf
             else:
-                candidate = HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold)
+                candidate = HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold, subbands_upper_limits)
 
             # adaugam coeficientul curent in lista
             dominantList.append(candidate)
@@ -226,7 +233,7 @@ def HandleSignificantCoefficient(coefficient, initial_reconstruction_value, thre
     return candidate, initial_reconstruction_value
 
 # functie pentru tratarea unui coeficient insignificant
-def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold):
+def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold, upper_limits):
     coefficient = coefficients[index]
 
     # initializam un nou tip de element pentru lista de coeficienti dominanti
@@ -240,18 +247,43 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
     # parcurgem descendentii si verificam statusul lor
     subbands = []
     # tratam un caz particular al folosirii functiei logaritm (nu se poate calcula log(0))
-    current_level = decomposition_levels
-    if index > 0:
-        current_level -= int(np.floor(math.log(index, 4)))
+    for limit in upper_limits:
+        if index < limit:
+            current_level = len(upper_limits) - upper_limits.index(limit)
+            break
+
     if current_level == 1:
         candidate = DominantListItem("subband not defined yet", coefficient)
         candidate.Reconstruction(0)
         candidate.Symbol("Z")
     elif current_level == decomposition_levels:
-        for higher_level in range(1, current_level):
-            inferior_limit = np.power(4, current_level - higher_level) * index
-            superior_limit = np.power(4, current_level - higher_level) * (index + 1)
-            subbands.append((inferior_limit, superior_limit))
+        # verificam daca elementul curent se afla in LL, (caz special)
+        index_in_subband = index % int(upper_limits[0] / 4) + int(index / upper_limits[0])
+        if index < int(upper_limits[0] / 4):
+            # ne aflam in LL de la cel mai mare nivel de descompunere
+            # trebuie sa analizam atat elementele din subbenzile de la nivelurile inferioare, cat si elementele din benzile adiacente (HL, LH si HH)
+            # tratam cele 3 subbenzi adiacente
+            for subband_index in range(3):
+                index_at_current_subband = 4 * (subband_index + 1) + index_in_subband
+                subbands.append((index_at_current_subband, index_at_current_subband + 1))
+                divizor = index_at_current_subband % np.power(4, current_level) - 4
+                step = int(np.power(int(4 / 2), current_level - 1))
+                inferior_limit_0 = np.power(4, current_level) + int(4 / 2) * (divizor) + 4 * int(divizor / 2)
+                superior_limit_0 = inferior_limit_0 + step
+                inferior_limit_1 = inferior_limit_0 + np.power(4, current_level - 1)
+                superior_limit_1 = inferior_limit_1 + step
+                subbands.append((inferior_limit_0, superior_limit_0, inferior_limit_1, superior_limit_1))
+        else:
+            # atentie aici!
+            for higher_level in range(1, current_level):
+                index_at_current_subband = index_in_subband
+                divizor = index_at_current_subband % np.power(4, current_level)
+                step = int(np.power(int(4 / 2), current_level - 1))
+                inferior_limit_0 = np.power(4, current_level) + int(4 / 2) * (divizor) + 4 * int(divizor / 2)
+                superior_limit_0 = inferior_limit_0 + step
+                inferior_limit_1 = inferior_limit_0 + np.power(4, current_level - 1)
+                superior_limit_1 = inferior_limit_1 + step
+                subbands.append((inferior_limit_0, superior_limit_0, inferior_limit_1, superior_limit_1))
     else:
         divizor = index % np.power(4, current_level) - 4
         step = int(np.power(int(4 / 2), decomposition_levels - current_level))
@@ -262,7 +294,7 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
         subbands.append((inferior_limit_0, superior_limit_0, inferior_limit_1, superior_limit_1))
 
     significant_desc_found = False
-    for index in range(current_level - 1):
+    for index in range(len(subbands)):
         current_interval = subbands[index]
         inferior_limit_0 = current_interval[0]
         superior_limit_1 = current_interval[-1]
@@ -273,8 +305,6 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
             inferior_limit_1 = current_interval[2]
         idx = inferior_limit_0
         # vrem sa putem schimba indexul iterator ; for idx in range nu ne permite acest lucru ; asadar folosind un while
-        if significant_desc_found == True:
-            break
         while idx < superior_limit_1:
             if idx == superior_limit_0:
                 idx += (inferior_limit_1 - superior_limit_0)
@@ -285,14 +315,22 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
                 break
             idx += 1
 
-        # initializam un nou tip de element pentru lista de coeficienti dominanti
-        candidate.Reconstruction(0)
-        if significant_desc_found == True:
-            candidate.Symbol("IZ")
-        else:
-            # coeficientul curent este un ZTR intrucat nu are niciun descendent significant
-            candidate.Symbol("ZTR")
-
+    # initializam un nou tip de element pentru lista de coeficienti dominanti
+    candidate.Reconstruction(0)
+    if significant_desc_found == True:
+        candidate.Symbol("IZ")
+    else:
+        # coeficientul curent este un ZTR intrucat nu are niciun descendent significant
+        candidate.Symbol("ZTR")
+        for index in range(len(subbands)):
+            current_interval = subbands[index]
+            inferior_limit_0 = current_interval[0]
+            superior_limit_1 = current_interval[-1]
+            superior_limit_0 = None
+            inferior_limit_1 = None
+            if len(current_interval) > 2:
+                superior_limit_0 = current_interval[1]
+                inferior_limit_1 = current_interval[2]
             # parcurgem din nou toti descendentii si ii marcam cu inf pentru a fi ignorati la urmatoarele parcurgeri
             idx = inferior_limit_0
             while idx < superior_limit_1:
@@ -301,7 +339,6 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
                 # prelucrare valoare (verificare tip valoarea)
                 coefficients[idx] = np.inf
                 idx += 1
-
     return candidate
 
 # functie care realizeaza subordinate pass (encodarea valorilor rezultate in urma dominant pass)

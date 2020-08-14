@@ -141,3 +141,22 @@ def ArrayToSquareMatrix(items):
         for j in range(size):
             result[i, j] = items[i * size + j]
     return result
+
+##########################################################################################
+
+# functie care returneaza indicii de decompozitie a unei matrici de coeficienti in functie de dimensiunea imaginii si de nr. de nivele de descompunere
+# se va returna o lista de liste; fiecare element (sublista din lista) va avea forma [limita_superioara_subbanda, nr._elemente_subbanda]
+def GetDecompositionIndices(size, decomposition_levels):
+    # extragem coordonatele dimensionale
+    rows, cols = size
+    if rows != cols:
+        raise Exception("Rows should be equal to the Cols! Square Matrix")
+    ranges = []
+    for level in range(decomposition_levels):
+        upper_limit = rows
+        rows = int(rows/2)
+        size = int(np.power(rows,2))
+        ranges.append([upper_limit, size])
+
+    ranges.reverse()
+    return ranges

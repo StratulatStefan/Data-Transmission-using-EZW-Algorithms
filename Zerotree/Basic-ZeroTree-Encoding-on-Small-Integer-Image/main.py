@@ -1,11 +1,20 @@
 from api.zerotree import *
-from matplotlib import pyplot
+from api.image_general_use import *
+from api.wavelets import *
 import time
+import pywt
+from api.plotter import *
+
 
 # acest script nu are ca scop observarea de rezultate vizuale in termeni de imagini, ci doar de valori
 # avem ca input o imagine mica (8x8) asupra careia s-a aplicat DWT pe 3 nivele
 # dorim sa realizam encodarea folosind Successive-Approximation Quantization, prezentata in documentul principal
 # avand la baza un exemplu prezentat in document, ne asteptam sa obtinem aceleasi rezultate
+
+
+# repara algoritmul !
+    # 1. tre sa intelegi calumea cum se face determinarea si parcurgerea descendentilor [x]
+    # 2. tre sa implementezi acest lucru
 
 
 if __name__ == "__main__":
@@ -18,14 +27,35 @@ if __name__ == "__main__":
                    [  3,     0,    -3,     2,     3,    -2,     0,     4],
                    [  2,    -3,     6,    -4,     3,     6,     3,     6],
                    [  5,    11,     5,     6,     0,     3,    -4,     4]), np.int32)
+
     DWTs = np.array(([26,    6,   13,   10],
                     [-7,    7,    6,    4],
                     [ 4,   -4,    4,   -3],
                     [ 2,   -2,   -2,    0]), np.int32)
+    '''
+    imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
+    try:
+        image = ImageRead(imagePATH, cv.IMREAD_GRAYSCALE)
+    except Exception as exc:
+        BasicException(exc)
+
+    
+    LL, (HL, LH, HH) = pywt.dwt2(image, "haar")
+    r, c = LL.shape
+    DWT = np.zeros(image.shape, np.float32)
+    DWT[:r, :c] = LL
+    DWT[:r, c:] = HL
+    DWT[r:, :c] = LH
+    DWT[r:, c:] = HH
+    Plot(DWT,221,"adasda")
+    '''
+
+
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
-    decomposition_levels = int(math.log(rows * cols, 4))
 
+    # setam nr. nivelelor de descompunere
+    decomposition_levels = 2
 
     # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
     # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
@@ -36,6 +66,7 @@ if __name__ == "__main__":
 
     threshold = GetInitialThreshold(DWT)
 
+    Plot(DWT, 221,"aa")
     loops = 3
     subordinateList = []
     for loop in range(loops):
@@ -83,7 +114,8 @@ if __name__ == "__main__":
         # trimitem significance_map si valorile de recontructie catre decoder
         # (ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti)
         print(significance_map)
-        x = SendEncodings(DWT.shape,significance_map_encoding_conventions, significance_map_encoding, reconstruction_values)
+        send = SendEncodings(DWT.shape,significance_map_encoding_conventions, significance_map_encoding, reconstruction_values)
+        print(send)
         print("#############################################")
         '''
         print(f"Loop {loop + 1}")
@@ -92,5 +124,12 @@ if __name__ == "__main__":
         printList(dominantList)
         print("\n\n")
         '''
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    print(DWT)
+    print(send)
+    Plot(send,222,"asdasda")
     pyplot.show()
 
