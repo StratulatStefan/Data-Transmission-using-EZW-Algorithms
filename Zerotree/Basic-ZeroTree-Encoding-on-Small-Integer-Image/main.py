@@ -50,12 +50,11 @@ if __name__ == "__main__":
     Plot(DWT,221,"adasda")
     '''
 
-
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
 
     # setam nr. nivelelor de descompunere
-    decomposition_levels = 2
+    decomposition_levels = 3
 
     # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
     # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
@@ -67,7 +66,7 @@ if __name__ == "__main__":
     threshold = GetInitialThreshold(DWT)
 
     Plot(DWT, 221,"aa")
-    loops = 3
+    loops = 1
     subordinateList = []
     for loop in range(loops):
         # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
@@ -77,7 +76,6 @@ if __name__ == "__main__":
         auxiliary = IdentifySignificants(dominantList)
         for aux in auxiliary:
             subordinateList.append(aux)
-
 
         dominantList_copy = np.copy(dominantList)
 
@@ -128,8 +126,6 @@ if __name__ == "__main__":
     print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    print(DWT)
-    print(send)
     Plot(send,222,"asdasda")
     pyplot.show()
 
