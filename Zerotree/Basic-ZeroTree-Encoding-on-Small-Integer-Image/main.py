@@ -28,7 +28,7 @@ if __name__ == "__main__":
                    [  2,    -3,     6,    -4,     3,     6,     3,     6],
                    [  5,    11,     5,     6,     0,     3,    -4,     4]), np.int32)
 
-    DWTs = np.array(([26,    6,   13,   10],
+    DWT = np.array(([26,    6,   13,   10],
                     [-7,    7,    6,    4],
                     [ 4,   -4,    4,   -3],
                     [ 2,   -2,   -2,    0]), np.int32)
@@ -47,14 +47,14 @@ if __name__ == "__main__":
     DWT[:r, c:] = HL
     DWT[r:, :c] = LH
     DWT[r:, c:] = HH
-    Plot(DWT,221,"adasda")
     '''
+    Plot(DWT,221,"adasda")
 
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
 
     # setam nr. nivelelor de descompunere
-    decomposition_levels = 3
+    decomposition_levels = 2
 
     # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
     # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     threshold = GetInitialThreshold(DWT)
 
     Plot(DWT, 221,"aa")
-    loops = 1
+    loops = 3
     subordinateList = []
     for loop in range(loops):
         # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
