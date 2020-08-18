@@ -104,7 +104,8 @@ ClassAttributeByString = lambda object, criteria : getattr(object, criteria)
 
 # functie care realizeaza diferenta a doua liste (listA - listB)
 def ListsDifference(listA, listB):
-    return list(filter(lambda candidate : candidate not in listB, listA))
+    return set(listA) - set(listB)
+    # mult mai eficient decat list(filter(lambda candidate : candidate not in listB, listA))
 
 ##########################################################################################
 

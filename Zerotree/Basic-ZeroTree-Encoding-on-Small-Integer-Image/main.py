@@ -2,7 +2,6 @@ from api.zerotree import *
 from api.image_general_use import *
 from api.wavelets import *
 import time
-import pywt
 from api.plotter import *
 
 
@@ -11,10 +10,7 @@ from api.plotter import *
 # dorim sa realizam encodarea folosind Successive-Approximation Quantization, prezentata in documentul principal
 # avand la baza un exemplu prezentat in document, ne asteptam sa obtinem aceleasi rezultate
 
-
-# repara algoritmul !
-    # 1. tre sa intelegi calumea cum se face determinarea si parcurgerea descendentilor [x]
-    # 2. tre sa implementezi acest lucru
+# repara SendEncoding
 
 
 if __name__ == "__main__":
@@ -49,13 +45,12 @@ if __name__ == "__main__":
                     [3,1,8,9,5,2,9,7,-2,-5,-1,6,9,6,-1,-2],
                     [-2,2,3,-6,-3,3,4,1,1,-8,2,4,12,3,2,3]), np.int32)
 
-    imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
-    #imagePATH = "D:\Confidential\EZW Algorithm\saga.jpg"
+    #imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
+    imagePATH = "D:\Confidential\EZW Algorithm\saga.jpg"
     try:
         image = ImageRead(imagePATH, cv.IMREAD_GRAYSCALE)
     except Exception as exc:
         BasicException(exc)
-
     
     LL, (HL, LH, HH) = pywt.dwt2(image, "haar")
     DWT = np.zeros(LL.shape, np.float32)
@@ -65,7 +60,8 @@ if __name__ == "__main__":
     DWT[:r, c:] = HL
     DWT[r:, :c] = LH
     DWT[r:, c:] = HH
-    Plot(DWT,221,"adasda")
+    Plot(image, 221, "img")
+    Plot(DWT,222,"adasda")
 
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
@@ -78,12 +74,11 @@ if __name__ == "__main__":
     start = time.perf_counter_ns()
     coefficients = ReorganizeMatrix(DWT, decomposition_levels) # < 100 microsecunde
     stop = time.perf_counter_ns()
-    print(f"Timp in microsecunde : {(stop - start) / 1e3}")
+    print(f"Timp in secunde pentru transformare in lista de coeficienti: {(stop - start) / 1e9} s")
 
     threshold = GetInitialThreshold(DWT)
 
-    Plot(DWT, 221,"aa")
-    loops = 10
+    loops = 5
     subordinateList = []
     print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     for loop in range(loops):
@@ -110,13 +105,11 @@ if __name__ == "__main__":
         print(f"Timp in secunde ListDifference : {(stop - start) / 1e9} s")
 
         # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
-        subordinateList = SubordinatePass(subordinateList, threshold, loop)
         start = time.perf_counter_ns()
         subordinateList = SubordinatePass(subordinateList, threshold, loop)
         stop = time.perf_counter_ns()
         print(f"Timp in secunde Subordinate Pass : {(stop - start) / 1e9} s")
 
-        continue
         # Observatie ! In mod obisnuit, dominantList_copy ar trebui sa contina valorile rezultate din pasul dominant (fara a tine cont de valorile
         # de reconstructie rezultate din pasul subordonat)
         # Insa, elementele significate cu valorile de reconstructie modificate rezultate din pasul subordonat sunt referinte la elementele din dominant List
@@ -142,21 +135,24 @@ if __name__ == "__main__":
 
         # trimitem significance_map si valorile de recontructie catre decoder
         # (ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti)
-        print(significance_map)
-        #send = SendEncodings(DWT.shape,significance_map_encoding_conventions, significance_map_encoding, reconstruction_values)
+        #print(significance_map)
+        start = time.perf_counter_ns()
+        send = SendEncodings(decomposition_levels, DWT.shape, significance_map_encoding_conventions, significance_map_encoding,reconstruction_values)
+        stop = time.perf_counter_ns()
+        print(f"Timp in secunde trimitere si recompunere : {(stop - start) / 1e9} s")
         #print(send)
         print("#############################################")
-        '''
-        print(f"Loop {loop + 1}")
-        printList(subordinateList)
-        print("xxxxxx")
-        printList(dominantList)
-        print("\n\n")
-        '''
     print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    Plot(send,222,"asdasda")
+    Plot(send,223,"asdasda")
+    r,c = send.shape
+    r = int(r/2)
+    c = int(c/2)
+    LL = send[:r,:c]
+    HL = send[:r, c:]
+    LH = send[r:, :c]
+    HH = send[r:, c:]
+    coeffs = (LL, (HL, LH, HH))
+    img = pywt.idwt2(coeffs,"haar")
+    Plot(img, 224,"ssss")
     pyplot.show()
 

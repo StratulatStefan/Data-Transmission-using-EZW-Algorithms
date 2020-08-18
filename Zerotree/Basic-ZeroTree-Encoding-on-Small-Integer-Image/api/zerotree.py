@@ -12,12 +12,8 @@ SymbolAlphabet = ["POS", "NEG", "IZ", "ZTR", "Z"]
 # implementam descrierea unui obiect (o clasa) pentru a interpreta mai eficient detalii despre fiecare coeficient din Dominant List
 class DominantListItem:
     def __init__(self, subband, coefficient):
-        self.Subband(subband)
         self.Coefficient(coefficient)
         self.encoding = -1
-
-    def Subband(self, subband : str):
-        self.subband : str = subband
 
     def Coefficient(self, coeff : int):
         self.coefficient : int = coeff
@@ -393,8 +389,7 @@ def SignificanceMapEncoding(significance_map, encoding_rules):
 # - ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti pe baza careia se va realiza
 # imaginea finala
 # - aceasta functie va fi folosita la receptie
-# repara aici!
-def SendEncodings(size,conventions, significance_map_encoding, reconstruction_values):
+def SendEncodings(decomposition_level, size, conventions, significance_map_encoding, reconstruction_values):
     # recompunem significance_map
     # extragem toate elemente fara primul (primul este IZ, care este echivalent cu al doilea, care este Z)
     encoding_bits = list(conventions.values())[1:]
@@ -403,10 +398,15 @@ def SendEncodings(size,conventions, significance_map_encoding, reconstruction_va
 
     # cream o lista de coeficienti de aceeasi dimensiune cu lista de coeficienti ce a fost encodata
     coefficients = [-np.inf] * (size[0] * size[1])
-    decomposition_level = int(math.log(size[0] * size[1], 4))
     index = 0
+    decomposition_levels = GetDecompositionIndices(size, decomposition_level)
     for significant in significance_map:
-        current_level = 3 if index == 0 else decomposition_level - int(math.log(index, 4))
+        #identificarea nivelului curent
+        for idx, level in enumerate(decomposition_levels):
+            upper_level = int(np.power(level[0], 2))
+            if index < upper_level:
+                current_level = decomposition_level - idx
+                break
         if significant in ["POS", "NEG"]:
             if reconstruction_values != []:
                 coeff = reconstruction_values[0]
@@ -505,7 +505,6 @@ def RecomposeDecodedCoefficients(size, coefficients):
         prev_row = row_level
         prev_col = col_level
     return finalMatrix
-
 
 def AnalyzeDescendents(levels, upper_limits, coefficients, index, subbands):
     coefficient = coefficients[index]
