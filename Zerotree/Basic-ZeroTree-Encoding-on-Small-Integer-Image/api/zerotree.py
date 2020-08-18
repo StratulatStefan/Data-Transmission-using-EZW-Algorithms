@@ -273,24 +273,7 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
         candidate.Symbol("ZTR")
         for idx in subbands:
             coefficients[idx] = np.inf
-    '''
-        # coeficientul curent este un ZTR intrucat nu are niciun descendent significant
-        candidate.Symbol("ZTR")
-        for index in range(len(subbands)):
-            current_interval = subbands[index]
-            inferior_limit_0 = current_interval[0]
-            superior_limit_1 = current_interval[-1]
-            superior_limit_0 = current_interval[1] if len(current_interval) > 2 else None
-            inferior_limit_1 = current_interval[2] if len(current_interval) > 2 else None
-            # parcurgem din nou toti descendentii si ii marcam cu inf pentru a fi ignorati la urmatoarele parcurgeri
-            idx = inferior_limit_0
-            while idx < superior_limit_1:
-                if idx == superior_limit_0:
-                    idx += (inferior_limit_1 - superior_limit_0)
-                # prelucrare valoare (verificare tip valoarea)
-                coefficients[idx] = np.inf
-                idx += 1
-    '''
+
     #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv#
 
     return candidate
@@ -570,8 +553,13 @@ def GetNextSubbands(decomposition_levels, current_level,upper_limits,index, coef
     index_in_subband = index % subband_size
     #step = int(subband_size/2) * (decomposition_levels - current_level)
     step = int(np.sqrt(band_size)) - 2
+    elements_on_the_line = int(np.sqrt(subband_size))
+    current_line_in_band = int(index_in_subband / elements_on_the_line) * int(np.sqrt(band_size))
+    current_line_in_subband = int(index_in_subband / elements_on_the_line) * int(np.sqrt(subband_size))
+    index_in_current_line = index_in_subband % current_line_in_subband if current_line_in_subband > 0 else index_in_subband
 
-    inferior_limit_0 = current_subband * band_size + index_in_subband * 2 + subband_size * int((index_in_subband / int(np.sqrt(subband_size))))
+    #inferior_limit_0 = current_subband * band_size + index_in_subband * 2 + subband_size * int((index_in_subband / int(np.sqrt(subband_size))))
+    inferior_limit_0 = current_subband * band_size + 2 * (current_line_in_band + index_in_current_line)
     superior_limit_0 = inferior_limit_0 + 2
     inferior_limit_1 = superior_limit_0 + step
     superior_limit_1 = inferior_limit_1 + 2
