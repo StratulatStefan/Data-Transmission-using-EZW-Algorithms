@@ -27,7 +27,7 @@ if __name__ == "__main__":
                    [  2,    -3,     6,    -4,     3,     6,     3,     6],
                    [  5,    11,     5,     6,     0,     3,    -4,     4]), np.int32)
 
-    DWT = np.array(([26,    6,   13,   10],
+    DWTs = np.array(([26,    6,   13,   10],
                     [-7,    7,    6,    4],
                     [ 4,   -4,    4,   -3],
                     [ 2,   -2,   -2,    0]), np.int32)
@@ -49,9 +49,8 @@ if __name__ == "__main__":
                     [3,1,8,9,5,2,9,7,-2,-5,-1,6,9,6,-1,-2],
                     [-2,2,3,-6,-3,3,4,1,1,-8,2,4,12,3,2,3]), np.int32)
 
-    '''
-    #imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
-    imagePATH = "D:\Confidential\EZW Algorithm\saga.jpg"
+    imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
+    #imagePATH = "D:\Confidential\EZW Algorithm\saga.jpg"
     try:
         image = ImageRead(imagePATH, cv.IMREAD_GRAYSCALE)
     except Exception as exc:
@@ -66,7 +65,6 @@ if __name__ == "__main__":
     DWT[:r, c:] = HL
     DWT[r:, :c] = LH
     DWT[r:, c:] = HH
-    '''
     Plot(DWT,221,"adasda")
 
     # extragem coordonatele dimensionale ale imaginii
@@ -85,11 +83,16 @@ if __name__ == "__main__":
     threshold = GetInitialThreshold(DWT)
 
     Plot(DWT, 221,"aa")
-    loops = 3
+    loops = 10
     subordinateList = []
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     for loop in range(loops):
         # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
-        dominantList, coefficients = DominantPass(coefficients, (rows, cols), decomposition_levels, int(threshold / np.power(2, loop)))
+        start = time.perf_counter_ns()
+        dominantList, coefficients = DominantPass(coefficients, (rows, cols), decomposition_levels,int(threshold / np.power(2, loop)))
+        stop = time.perf_counter_ns()
+        print(f"Timp in secunde Dominant Pass : {(stop - start) / 1e9} s")
+
 
         # Extragem lista subordonata, care contine coeficientii care au fost determinati ca fiind significant in urma pasului dominant
         auxiliary = IdentifySignificants(dominantList)
@@ -101,10 +104,19 @@ if __name__ == "__main__":
         # pastram doar valorile insignificante in dominantList, intrucat urmatorul pas dominant va parcurge doar aceste valori (insignificante)
         # dominantList contine valorile significante, care se afla si in subordonateList
         # asadar, pentru a determina valorile insignificante, facem diferenta celor doua liste
+        start = time.perf_counter_ns()
         dominantList = ListsDifference(dominantList, subordinateList)
+        stop = time.perf_counter_ns()
+        print(f"Timp in secunde ListDifference : {(stop - start) / 1e9} s")
 
         # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
         subordinateList = SubordinatePass(subordinateList, threshold, loop)
+        start = time.perf_counter_ns()
+        subordinateList = SubordinatePass(subordinateList, threshold, loop)
+        stop = time.perf_counter_ns()
+        print(f"Timp in secunde Subordinate Pass : {(stop - start) / 1e9} s")
+
+        continue
         # Observatie ! In mod obisnuit, dominantList_copy ar trebui sa contina valorile rezultate din pasul dominant (fara a tine cont de valorile
         # de reconstructie rezultate din pasul subordonat)
         # Insa, elementele significate cu valorile de reconstructie modificate rezultate din pasul subordonat sunt referinte la elementele din dominant List
@@ -131,8 +143,8 @@ if __name__ == "__main__":
         # trimitem significance_map si valorile de recontructie catre decoder
         # (ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti)
         print(significance_map)
-        send = SendEncodings(DWT.shape,significance_map_encoding_conventions, significance_map_encoding, reconstruction_values)
-        print(send)
+        #send = SendEncodings(DWT.shape,significance_map_encoding_conventions, significance_map_encoding, reconstruction_values)
+        #print(send)
         print("#############################################")
         '''
         print(f"Loop {loop + 1}")

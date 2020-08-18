@@ -193,8 +193,8 @@ def DominantPass(coefficients, coordinates, decomposition_levels, threshold):
             candidate, initial_reconstruction_value = HandleSignificantCoefficient(coefficient, initial_reconstruction_value, threshold)
 
             # setam acest coeficient cu valoarea -np.inf in lista de coeficienti astfel incat, la urmatorul pas dominant sa fie ignorati
-            coefficients_copy[index] = -np.inf
-            coefficients[index] = -np.inf
+           # coefficients_copy[index] = -np.inf
+           # coefficients[index] = -np.inf
         else:
             candidate = HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold, subbands_upper_limits)
 
@@ -260,7 +260,7 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
     significant_desc_found = False
 
     for idx in subbands:
-        if abs(coefficients[idx]) > threshold and coefficients[idx] != -np.inf:
+        if abs(coefficients[idx]) > threshold  and coefficients[idx] != -np.inf :
             significant_desc_found = True
             break
 
@@ -348,6 +348,7 @@ def GetUncertaintyIntervals(iterations, initialThreshold):
 # depinde de iteratia anterioara (de valorile ce exista deja in lista)
 finalList = []
 def GenerateSequenceToSend(dominant):
+    finalList = []
     dominants = ["IZ", "Z", "ZTR"]
     # daca finalList este o lista goala, atunci suntem in prima iteratie de descompunere
     # in acest caz, valorile din lista dominanta vor fi adaugate in finalList
@@ -551,14 +552,12 @@ def GetNextSubbands(decomposition_levels, current_level,upper_limits,index, coef
     subband_size = int(band_size / 4)
     current_subband = int(index / subband_size)
     index_in_subband = index % subband_size
-    #step = int(subband_size/2) * (decomposition_levels - current_level)
     step = int(np.sqrt(band_size)) - 2
     elements_on_the_line = int(np.sqrt(subband_size))
     current_line_in_band = int(index_in_subband / elements_on_the_line) * int(np.sqrt(band_size))
     current_line_in_subband = int(index_in_subband / elements_on_the_line) * int(np.sqrt(subband_size))
     index_in_current_line = index_in_subband % current_line_in_subband if current_line_in_subband > 0 else index_in_subband
 
-    #inferior_limit_0 = current_subband * band_size + index_in_subband * 2 + subband_size * int((index_in_subband / int(np.sqrt(subband_size))))
     inferior_limit_0 = current_subband * band_size + 2 * (current_line_in_band + index_in_current_line)
     superior_limit_0 = inferior_limit_0 + 2
     inferior_limit_1 = superior_limit_0 + step
