@@ -3,7 +3,8 @@ from api.image_general_use import *
 from api.wavelets import *
 import time
 from api.plotter import *
-
+from api.decoder import *
+from api.encoder import *
 
 # acest script nu are ca scop observarea de rezultate vizuale in termeni de imagini, ci doar de valori
 # avem ca input o imagine mica (8x8) asupra careia s-a aplicat DWT pe 3 nivele
@@ -45,18 +46,22 @@ if __name__ == "__main__":
                     [3,1,8,9,5,2,9,7,-2,-5,-1,6,9,6,-1,-2],
                     [-2,2,3,-6,-3,3,4,1,1,-8,2,4,12,3,2,3]), np.int32)
 
-
     # setam nr. nivelelor de descompunere
-    decomposition_levels = 2
+    decomposition_levels = 1
 
-
-    imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
+    #imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
     #imagePATH = "D:\Confidential\EZW Algorithm\saga.jpg"
+    imagePATH = "D:\Confidential\EZW Algorithm\\tree.jpg"
+
     try:
         image = ImageRead(imagePATH, cv.IMREAD_GRAYSCALE)
     except Exception as exc:
         BasicException(exc)
 
+    print("-------------------------------------------------")
+    print(f"Dimensiune imagine originala : {int(image.shape[0])} x {int(image.shape[1])}")
+
+    # schimba formula aici!
     if image.shape[0] / np.power(2,decomposition_levels) <= 4:
         raise Exception("Too much decomposition levels!")
 
@@ -75,33 +80,34 @@ if __name__ == "__main__":
     DWT[r:, :c] = LH
     DWT[r:, c:] = HH
     transmission_DWT = pywt.idwt2((LL, (HL, LH, HH)), "haar")
-    Plot(transmission_DWT, 221, "Transmission Recomposed")
-    Plot(DWT,222,"Transmission DWT")
+    Plot(transmission_DWT, 251, "Transmission Recomposed")
+    Plot(DWT,252,"Transmission DWT")
 
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
 
+    loops = 5
+
+    print(f"Nivele de descompunere : {decomposition_levels}")
+    print(f"Iteratii de aplicare a threshold-ului : {loops}")
+    print("-------------------------------------------------\n\n")
+
+    nof_bites_needed = int(np.ceil(np.log2(np.max(DWT))))
+    matrix_size = rows * cols * nof_bites_needed
+    print(f"Matricea de coeficienti contine {BytestoKBytes(BitestoBytes(matrix_size)) } Kb")
+
     # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
     # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
-    start = time.perf_counter_ns()
     coefficients = ReorganizeMatrix(DWT, decomposition_levels) # < 100 microsecunde
-    stop = time.perf_counter_ns()
-    print(f"Timp in secunde pentru transformare in lista de coeficienti: {(stop - start) / 1e9} s")
 
     threshold = GetInitialThreshold(DWT)
 
-    loops = 5
     subordinateList = []
     total_time = 0
     print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     for loop in range(loops):
         # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
-        start = time.perf_counter_ns()
         dominantList, coefficients = DominantPass(coefficients, (rows, cols), decomposition_levels,int(threshold / np.power(2, loop)))
-        stop = time.perf_counter_ns()
-        total_time += stop - start
-        print(f"Timp in secunde Dominant Pass : {(stop - start) / 1e9} s")
-
 
         # Extragem lista subordonata, care contine coeficientii care au fost determinati ca fiind significant in urma pasului dominant
         auxiliary = IdentifySignificants(dominantList)
@@ -113,17 +119,10 @@ if __name__ == "__main__":
         # pastram doar valorile insignificante in dominantList, intrucat urmatorul pas dominant va parcurge doar aceste valori (insignificante)
         # dominantList contine valorile significante, care se afla si in subordonateList
         # asadar, pentru a determina valorile insignificante, facem diferenta celor doua liste
-        start = time.perf_counter_ns()
         dominantList = ListsDifference(dominantList, subordinateList)
-        stop = time.perf_counter_ns()
-        print(f"Timp in secunde ListDifference : {(stop - start) / 1e9} s")
 
         # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
-        start = time.perf_counter_ns()
         subordinateList = SubordinatePass(subordinateList, threshold, loop)
-        stop = time.perf_counter_ns()
-        total_time += stop - start
-        print(f"Timp in secunde Subordinate Pass : {(stop - start) / 1e9} s")
 
         # Observatie ! In mod obisnuit, dominantList_copy ar trebui sa contina valorile rezultate din pasul dominant (fara a tine cont de valorile
         # de reconstructie rezultate din pasul subordonat)
@@ -148,17 +147,24 @@ if __name__ == "__main__":
         # asadar, eliminam coeficientii nuli din lista coeficientilor
         reconstruction_values = list(filter(lambda item : item != 0, reconstruction_values))
 
+        signif_map_bites_needed = 3
+        reconstruction_values_bites_needed = int(np.ceil(np.log2(np.max(reconstruction_values))))
+        len_items_to_send = len(significance_map_encoding) * signif_map_bites_needed + \
+                            len(reconstruction_values) * reconstruction_values_bites_needed
+        print(f"Significance Map ({BytestoKBytes(BitestoBytes(len(significance_map_encoding) * signif_map_bites_needed))} Kb) + "
+              f"Reconstruction Values : ({BytestoKBytes(BitestoBytes(len(reconstruction_values) * reconstruction_values_bites_needed ))} Kb) = "
+              f"{BytestoKBytes(BitestoBytes(len_items_to_send))} Kb")
+        print(f"Diferenta (biti castigati) : {BytestoKBytes(BitestoBytes(matrix_size - len_items_to_send))} Kb")
+        print(f"Raport compresie : {round(matrix_size / len_items_to_send,2)}")
+        print("#######################################################")
+
         # trimitem significance_map si valorile de recontructie catre decoder
         # (ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti)
         #print(significance_map)
-        start = time.perf_counter_ns()
         send = SendEncodings(decomposition_levels, DWT.shape, significance_map_encoding_conventions, significance_map_encoding,reconstruction_values)
-        stop = time.perf_counter_ns()
-        total_time += stop - start
-        print(f"Timp in secunde trimitere si recompunere : {(stop - start) / 1e9} s")
-        #print(send)
-        print("#############################################")
-    Plot(send,223,"Reception DWT")
+        msg = f"Loop {loop + 1}" if loop + 1 < loops else "Reception DWT"
+        Plot(send, int(f"25{3 + loop}"), msg)
+
     r,c = send.shape
     r = int(r/2)
     c = int(c/2)
@@ -168,7 +174,7 @@ if __name__ == "__main__":
     HH = send[r:, c:]
     coeffs = (LL, (HL, LH, HH))
     img = pywt.idwt2(coeffs,"haar")
-    Plot(img, 224,"Recomposed Received image")
-    print(f"Timp total: {total_time / 1e9} s")
+    Plot(img, int(f"25{3 + loops}"), "Recomposed")
+
     pyplot.show()
 

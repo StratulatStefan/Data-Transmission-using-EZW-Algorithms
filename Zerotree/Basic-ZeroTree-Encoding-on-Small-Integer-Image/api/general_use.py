@@ -161,3 +161,13 @@ def GetDecompositionIndices(size, decomposition_levels):
 
     ranges.reverse()
     return ranges
+
+##########################################################################################
+
+# functie care realizeaza conversia de la biti la bytes
+BitestoBytes = lambda value : round(value / 8 ,2)
+
+##########################################################################################
+
+# functie care realizeaza conversia de la bytes la kilobytes
+BytestoKBytes = lambda value : round(value / 1024 ,2)

@@ -1,17 +1,12 @@
 from api.general_use import *
-import time
-import math
 
-#####################################################################################
-# Toate implementarile urmatoare au in vedere abordarea SAQ, prezentata in document #
-#####################################################################################
-
-# alfabetul simbolurilor disponibile pentru definirea tipului de coeficient
-SymbolAlphabet = ["POS", "NEG", "IZ", "ZTR", "Z"]
+###########################################################################################
+###  Toate implementarile urmatoare au in vedere abordarea SAQ, prezentata in document  ###
+###########################################################################################
 
 # implementam descrierea unui obiect (o clasa) pentru a interpreta mai eficient detalii despre fiecare coeficient din Dominant List
 class DominantListItem:
-    def __init__(self, subband, coefficient):
+    def __init__(self, coefficient):
         self.Coefficient(coefficient)
         self.encoding = -1
 
@@ -19,7 +14,8 @@ class DominantListItem:
         self.coefficient : int = coeff
 
     def Symbol(self, symbol : str):
-        if symbol not in SymbolAlphabet:
+        # alfabetul simbolurilor disponibile pentru definirea tipului de coeficient
+        if symbol not in ["POS", "NEG", "IZ", "ZTR", "Z"]:
             raise Exception("Invalid symbol!")
         self.symbol : str = symbol
 
@@ -28,34 +24,29 @@ class DominantListItem:
 
     def EncodingSymbol(self, encoding : int):
         self.encoding = encoding
-        '''
-        if encoding == 0 or encoding == 1 or encoding == 2:
-            self.encoding = encoding
-        else:
-            raise Exception("Invalid Encoding Value")
-        '''
 
+    # supraincarcam functia __str__ (toString) pentru afisarea obiectului la consola
     def __str__(self):
-        return f"Coefficient [{self.coefficient}] === Symbol [{self.symbol}] === Reconstruction [{self.reconstruction}] === Encoding [{self.encoding}]"
+        return f"Coefficient [{self.coefficient}] === " \
+               f"Symbol [{self.symbol}] === " \
+               f"Reconstruction [{self.reconstruction}] === " \
+               f"Encoding [{self.encoding}]"
 
 # Threshold-ul initial se alege astfel incat sa fie mai mare decat jumatatea maximului valorilor absolute ale coeficientilor
 # T0 > |Xj| / 2 (unde Xj, reprezinta oricare dintre coeficienti)
 # Se asemenea, conform SAQ, se prefera ca T0 sa fie putere a lui 2
 # Asadar, determinam primul numar putere a lui 2, mai mare decat jumatatea valorii maxime dintre valorile absolute ale coeficientilor
 def GetInitialThreshold(image):
-    # valorile absolute ale coeficientilor
-    abs_coefs = abs(image)
-
-    # jumatatea valoarii maxima dintre coeficienti
-    max_abs_coef = np.max(abs_coefs) / 2
+    # jumatatea valorii maxime dintre valorile absolute ale coeficientilor
+    max_abs_coef = np.max(abs(image)) / 2
 
     # determinam threshold-ul ca fiind cea mai apropiata valoare mai mare decat max_abs_coef, si putere a lui 2
     power = np.ceil(np.log2(max_abs_coef))
-    threshold = np.power(2, power)
+    threshold = int(np.power(2, power))
 
-    return int(threshold)
+    return threshold
 
-# functie care analizeaza matricea de coeficienti si returneaza limitele nivelelor de descompunere in subbenzi
+# functie care analizeaza dimensiunile matricii de coeficienti si returneaza limitele nivelelor de descompunere
 def GetDecompositionLimits(dimensions, decomposition_levels):
     rows, cols = dimensions
 
@@ -98,6 +89,7 @@ def GetDecompositionLimits(dimensions, decomposition_levels):
   
     '''
 
+# functie care realizeaza descompunerea matricii de coeficienti in toate subbenzile componente de la fiecare nivel de descompunere
 def SubbandsDecompose(image, decomposition_levels):
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = image.shape
@@ -122,6 +114,7 @@ def SubbandsDecompose(image, decomposition_levels):
     return subbands
 
 # functie care reorganizeaza matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
+# se va returna un vector
 def ReorganizeMatrix(image, decomposition_levels):
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = image.shape
@@ -143,14 +136,13 @@ def ReorganizeMatrix(image, decomposition_levels):
 
         for candidate in candidates:
             candi = SearchStringInList(levels, candidate)
-            if len(candi) > 0:
-                final.append(subbands[candi[0]])
+            if len(candi) > 0 : final.append(subbands[candi[0]])
 
     final = list(map(lambda el : numpyarray_to_list(el), final))
 
     # face lista flatten (lista de liste devine lista)
-    final = ListFlatter(ListFlatter(final))
-    final = [float(i) for i in final]
+    final = [float(i) for i in ListFlatter(ListFlatter(final))]
+
     return final
 
 # - functie care efectueaza pasul dominant
@@ -194,7 +186,7 @@ def DominantPass(coefficients, coordinates, decomposition_levels, threshold):
         else:
             candidate = HandleInSignificantCoefficient(coefficients, index, decomposition_levels, threshold, subbands_upper_limits)
 
-            # adaugam coeficientul curent in lista
+        # adaugam coeficientul curent in lista
         dominantList.append(candidate)
 
     return dominantList, coefficients_copy
@@ -211,7 +203,7 @@ def HandleSignificantCoefficient(coefficient, initial_reconstruction_value, thre
     sign = 1 if coefficient > 0 else -1
 
     # initializam un nou tip de element pentru lista de coeficienti dominanti
-    candidate = DominantListItem("subband not defined yet", coefficient)
+    candidate = DominantListItem(coefficient)
 
     # setam tipul simbolului
     candidate.Symbol("POS" if sign == 1 else "NEG" if sign == -1 else None)
@@ -233,44 +225,43 @@ def HandleInSignificantCoefficient(coefficients, index, decomposition_levels, th
     coefficient = coefficients[index]
 
     # initializam un nou tip de element pentru lista de coeficienti dominanti
-    candidate = DominantListItem("subband not defined yet", coefficient)
-
-    # avem un coeficient insignificant
+    candidate = DominantListItem(coefficient)
+    candidate.Reconstruction(0)
 
     # verificam daca acesta mai are descendenti significanti, caz in care este considerat Isolated Zero
     # daca acesta are doar descendenti insignificanti, este considerat Zero Tree Root
-
     # parcurgem descendentii si verificam statusul lor
     subbands = []
-    # tratam un caz particular al folosirii functiei logaritm (nu se poate calcula log(0))
     for limit in upper_limits:
         if index < limit:
             current_level = len(upper_limits) - upper_limits.index(limit)
             break
 
+    # determinam valorile indexilor descendentilor coeficientului curent
     cand, subbands = AnalyzeDescendents((current_level, decomposition_levels), upper_limits,coefficients, index, subbands)
-    if cand != None:
-        return cand
 
-    #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv#
+    # functia returneaza un nou candidat in cazul in care elementul curent nu are descendenti, adica este un Zero
+    # cu alte cuvinte, se afla la primul nivel de descompunere (HL1 | LH1 | HH1)
+    # acest tip de element va fi returnat imediat, neavand nevoie de analiza urmatoare (a descendentilor)
+    if cand != None : return cand
+
+    # elementul curent este un ZeroTree sau un IZ; cu alte cuvinte, are descendenti
+    # urmeaza sa analizam acesti descendenti si sa stabilim daca elementul este ZeroTree sau Zero Izolat
     significant_desc_found = False
-
     for idx in subbands:
-        if abs(coefficients[idx]) > threshold  and coefficients[idx] != -np.inf :
+        # verificam daca elementul este significant raportat la threshold-ul curent
+        if abs(coefficients[idx]) > threshold:
             significant_desc_found = True
             break
 
-    # initializam un nou tip de element pentru lista de coeficienti dominanti
-    candidate.Reconstruction(0)
-
     if significant_desc_found == True:
+        # elementul are descendenti significanti, deci este un Zero Izolat
         candidate.Symbol("IZ")
     else:
+        # elementul nu are descendenti significanti, deci este un ZeroTree Root
+        # urmeaza sa punem toti descendentii pe inf astfel incat sa fie ignoranti in continuare, la urmatoarele iteratii
         candidate.Symbol("ZTR")
-        for idx in subbands:
-            coefficients[idx] = np.inf
-
-    #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv#
+        for idx in subbands : coefficients[idx] = np.inf
 
     return candidate
 
@@ -315,7 +306,6 @@ def SubordinatePass(subordonateList, threshold, iteration):
     #subordonateList = SortByAttribute(subordonateList, "reconstruction")
     return subordonateList
 
-
 # functie care returneaza intervalele de incertitudine specifice unei iteratii a procesului de identificare a tipurilor coeficientilor
 def GetUncertaintyIntervals(iterations, initialThreshold):
     uncertaintyInterval = [initialThreshold, 2 * initialThreshold]
@@ -331,230 +321,62 @@ def GetUncertaintyIntervals(iterations, initialThreshold):
         current_lower = int(initialThreshold / np.power(2, iteration + 1))
         current_upper = 2 * current_lower
         final.append([current_lower, current_upper])
-        if iteration + 1 < iterations:
-            intervals = []
-            for fn in final:
-                intervals.append(fn)
+        if iteration + 1 < iterations : intervals = [fn for fn in final]
     return ListToSet(final)
 
-# - functie care genereaza lista de valori care vor fi trimise
-# lista valorilor de trimis se genereaza pe baza listei dominante
-# lista dominanta ca contine, atat valorile insignificante, cat si cele significante, cu noua valoare de reconstructie
-# - se va folosi o lista globala pentru a retine lista acestor valori care vor fi trimise, intrucat o noua iteratie de descompunere
-# depinde de iteratia anterioara (de valorile ce exista deja in lista)
-finalList = []
-def GenerateSequenceToSend(dominant):
-    finalList = []
-    dominants = ["IZ", "Z", "ZTR"]
-    # daca finalList este o lista goala, atunci suntem in prima iteratie de descompunere
-    # in acest caz, valorile din lista dominanta vor fi adaugate in finalList
-    if finalList != []:
-        # suntem intr-o iteratie > 1
-        # se analizeaza finalList iar valorile din lista dominanta se scriu peste valorile din finalList care au simbolul "IZ", "ZTR" sau "Z"
-        # numaram cate elemente de acest tip exista in lista ("IZ", "ZTR" sau "Z")
-        zeros = len(list(filter(lambda value: value.symbol in dominants, finalList)))
-
-        # realizam o copie profunda a listei
-        finalList_copy = copy.deepcopy(finalList)
-
-        # fiecare valoare de tip Zeros este inlocuita de cate un element din dominant List
-        for i in range(zeros):
-            first_candidate_index = FirstOccurence(finalList_copy, "symbol", dominants)
-            finalList_copy[first_candidate_index] = None
-            finalList[first_candidate_index] = copy.deepcopy(dominant[0])
-            dominant = dominant[1:]
-    # adaugam restul elementelor din dominant List in finalList
-    for el in dominant:
-        finalList.append(el)
-
-    # returnam doar datele care trebuie transmise (nu avem nevoie de tot obiectul, ci doar de atributele symbol si valoarea de reconstructie
-    return list(map(lambda coefficient : [coefficient.symbol, coefficient.reconstruction], finalList))
-
-# functie ce genereaza conventiile de encodare a significance_map
-def SignificanceMapEncodingConventions():
-    # lista valorilor posibile din significance_map
-    # "IZ" si "Z" sunt echivalente dpv. al rezultatului final (ambele reprezinta o valoare izolata de 0)
-    possible_values = ["POS", "NEG", "ZTR", "IZ"]
-
-    # avem 4 valori deci avem nevoie doar de 2 biti (dorim sa reprezentam valorile 0, 1, 2, 3) (in loc de 24 necesari encodarii stringurilor)
-    return {"IZ" : 0,"Z" : 0, "ZTR" : 1, "POS" : 2, "NEG" : 3}
-
-# functie care codifica lista de coeficienti care va fi trimisa astfel incat sa se reduca nr de biti
-# de ex, in loc sa trimitem string-ul POS (24 de biti), vor realiza o codificare in binar si vom trimite doar 3 biti
-def SignificanceMapEncoding(significance_map, encoding_rules):
-    # codificam significance map pe baza conventiilor
-    return list(map(lambda item : encoding_rules[item], significance_map))
-
-# - functie prin care trimitem significance_map si valorile de recontructie catre decoder
-# - ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti pe baza careia se va realiza
-# imaginea finala
-# - aceasta functie va fi folosita la receptie
-def SendEncodings(decomposition_level, size, conventions, significance_map_encoding, reconstruction_values):
-    # recompunem significance_map
-    # extragem toate elemente fara primul (primul este IZ, care este echivalent cu al doilea, care este Z)
-    encoding_bits = list(conventions.values())[1:]
-    encoding_strings = list(conventions.keys())[1:]
-    significance_map = list(map(lambda item : encoding_strings[encoding_bits.index(item)],significance_map_encoding))
-
-    # cream o lista de coeficienti de aceeasi dimensiune cu lista de coeficienti ce a fost encodata
-    coefficients = [-np.inf] * (size[0] * size[1])
-    index = 0
-    decomposition_levels = GetDecompositionIndices(size, decomposition_level)
-    subbands_upper_limits = []
-    coefs_len = len(coefficients)
-    for level in range(decomposition_level):
-        subbands_upper_limits.append(int(coefs_len / np.power(4, decomposition_level - level - 1)))
-    for signif_index, significant in enumerate(significance_map):
-        #identificarea nivelului curent
-        for idx, level in enumerate(decomposition_levels):
-            upper_level = int(np.power(level[0], 2))
-            if signif_index < upper_level:
-                current_level = decomposition_level - idx
-                break
-
-        # verificam tipul elementului curent
-        if significant in ["POS", "NEG"]:
-            # valoarea curenta este significanta, deci extragem acest element din lista de valori si il setam in lista finala pe pozitia curenta
-            if reconstruction_values != []:
-                coeff = reconstruction_values[0]
-            reconstruction_values = reconstruction_values[1:]
-            coefficients[index] = coeff
-        elif significant == "Z":
-            coefficients[index] = 0
-        elif significant == "ZTR":
-            coefficients[index] = 0
-            coarser_level_upper_level = decomposition_levels[0]
-            LL_upper_limit = int(np.power(coarser_level_upper_level[0], 2) / 4)
-            if signif_index < LL_upper_limit:
-                # coeficientul curent se afla in LL, deci va trebui sa zerorizam toate elementele subordonate
-                indexes_in_subbands = list(map(lambda idcs: idcs * coarser_level_upper_level[1] + index, [1, 2, 3]))
-                if decomposition_level == 1:
-                    for subband_index in indexes_in_subbands:
-                        coefficients[subband_index] = 0
-            else:
-                indexes_in_subbands = [index]
-
-            buffer = []
-            descendents = []
-            aux_cl = current_level
-            for i in range(current_level - 1):
-                for subband_index in indexes_in_subbands:
-                    indexes = GetNextSubbands(decomposition_level, aux_cl, subbands_upper_limits, subband_index)
-                    for idx in indexes:
-                        buffer.append(idx)
-
-                for el in indexes_in_subbands:
-                    descendents.append(el)
-                for el in buffer:
-                    descendents.append(el)
-                indexes_in_subbands = np.copy(buffer)
-                aux_cl -= 1
-            descendents = set(descendents)
-            for descendent_index in descendents:
-                coefficients[descendent_index] = 0
-        if -np.inf in coefficients:
-            index = coefficients.index(-np.inf)
-    recomposed_wavelet_coefs = RecomposeDecodedCoefficients(decomposition_level, size, coefficients)
-    return recomposed_wavelet_coefs
-
-# functie folosita la receptie
-# aceasta functie primeste ca input lista de coeficienti realizata in urma procesului de decodare si formeaza matricea de coeficienti
-# Repara aici!
-def RecomposeDecodedCoefficients(decomposition_levels, size, coefficients):
-    # extragem coordonatele dimensionale pe care ar trebui sa le aiba rezultatul
-    rows, cols = size
-    if len(coefficients) != rows * cols:
-        raise Exception("Invalid size of coefficients list!")
-
-    # determinam nr. nivelelor de descompunere
-    levels = []
-    subbands_upper_limits = []
-    coefs_len = len(coefficients)
-    for level in range(decomposition_levels):
-        subbands_upper_limits.append(int(coefs_len / np.power(4, decomposition_levels - level - 1)))
-
-    previous_upper_level = 0
-    for dec_level in range(decomposition_levels):
-        upper_band_limit = subbands_upper_limits[dec_level]
-        subband_size = int(upper_band_limit / 4)
-
-        # din fiecare banda extragem cele 4 subbenzi
-        for sbband_idx in range(4 if dec_level == 0 else 3):
-            lower_limit = sbband_idx * subband_size + previous_upper_level
-            upper_limit = (sbband_idx + 1) * subband_size + previous_upper_level
-            levels.append(coefficients[lower_limit : upper_limit])
-            print(f"{sbband_idx * subband_size + previous_upper_level, (sbband_idx + 1) * subband_size + previous_upper_level}")
-        previous_upper_level = upper_band_limit
-
-    subbands = ["LL", "HL", "LH", "HH"]
-    final = {}
-    for dec_level in range(decomposition_levels, 0, -1):
-        bands = subbands[1:] if decomposition_levels != dec_level else subbands
-        for subband in bands:
-            coeffs = levels[0]
-            levels = levels[1:]
-            final[f"{subband}{dec_level}"] = coeffs
-
-    finalMatrix = np.zeros(size, np.float32)
-    prev_level = 0
-    for dec_level in range(decomposition_levels, 0, -1):
-        current_level = int(np.sqrt(subbands_upper_limits[decomposition_levels - dec_level]))
-        current_level_half = int(current_level / 2)
-
-        HL = ArrayToSquareMatrix(final[f"HL{dec_level}"])
-        LH = ArrayToSquareMatrix(final[f"LH{dec_level}"])
-        HH = ArrayToSquareMatrix(final[f"HH{dec_level}"])
-        if dec_level == decomposition_levels:
-            LL = ArrayToSquareMatrix(final[f"LL{dec_level}"])
-            finalMatrix[prev_level:current_level_half, prev_level : current_level_half] = LL
-        finalMatrix[:current_level_half, current_level_half:current_level] = HL
-        finalMatrix[current_level_half : current_level, : current_level_half] = LH
-        finalMatrix[current_level_half: current_level, current_level_half:current_level] = HH
-
-        prev_level = current_level
-    return finalMatrix
-
+# functie pe care o folosim atunci cand intalnim un element insignificant si trebuie sa analizam descendentii acestuia
+# in cazul identificarii descendentilor, acesta functie va returna indexul fiecarui descendent
 def AnalyzeDescendents(levels, upper_limits, coefficients, index, subbands):
     coefficient = coefficients[index]
     current_level, decomposition_levels = levels
 
+    # identificam nr. de elemente componente ale subbenzii LL
     LL_dimension = int(upper_limits[0] / 4)
+
+    # identificam nr. de elemente componente al benzii de la primul nivel (finnest)
     Finnest_subband = int(upper_limits[-1] / 4)
+
     if index >= Finnest_subband:
-        candidate = DominantListItem("subband not defined yet", coefficient)
+        # daca elementul curent se afla la primul nivel, inseamna ca nu are descendenti pe care sa ii analizam
+        # astfel, vom returna un candidat cu valoarea de reconstructie 0 si simbolul Z
+        candidate = DominantListItem(coefficient)
         candidate.Reconstruction(0)
         candidate.Symbol("Z")
         return candidate, subbands
 
+    # elementul curent are descendenti, pe care urmeaza sa ii identificam
     descendents = []
     if index < LL_dimension:
+        # elementul curent se afla in LL si trebuie sa analizam, in primul rand, elementele din celelalte subbenzi de la acelasi nivel (HL, LH si HH)
         indexes_in_subbands = list(map(lambda idcs : idcs * LL_dimension + index, [1,2,3]))
         if decomposition_levels == 1:
-            #subbands = list(map(lambda index : (index, index + 1), indexes_in_subbands))
+            # avem un singur nivel de descompunere, iar singurii descendenti se afla la acelasi nivel in celelalte subbenzi
             return None, indexes_in_subbands
     else:
         indexes_in_subbands = [index]
 
+    # procedeul se executa oarecum recursiv, intrucat elementele de la o iteratie depind de elementele de la iteratia anterioara
+    # asadar, definim un buffer in care vom pastra elementele de la iteratia curenta pentru a putea fi folosita la iteratia urmatoare
     buffer = []
     aux_cl = current_level
     for i in range(current_level - 1):
         for index in indexes_in_subbands:
+            # pentru fiecare element determinat anterior, determinam indecsii descendentilor
             indexes = GetNextSubbands(decomposition_levels, aux_cl, upper_limits, index)
             for idx in indexes:
                 buffer.append(idx)
 
-        for el in indexes_in_subbands:
-            descendents.append(el)
-        for el in buffer:
-            descendents.append(el)
+        descendents = ListFlatter([descendents, indexes_in_subbands, buffer])
         indexes_in_subbands = np.copy(buffer)
         aux_cl -= 1
-    x = 0
     descendents = set(descendents)
+
+    # returnam indecsii descendentilor
     return None, descendents
 
+# functie care identifica descendentii de la urm. nivel, ai unui element
+# se are in vedere ca avem corespondenta 1 : 4 (coarser : finner level)
 def GetNextSubbands(decomposition_levels, current_level,upper_limits,index):
-    subbands = []
     band_size = int(upper_limits[decomposition_levels - current_level + 1] / 4)
     subband_size = int(band_size / 4)
     current_subband = int(index / subband_size)
@@ -570,9 +392,6 @@ def GetNextSubbands(decomposition_levels, current_level,upper_limits,index):
     inferior_limit_1 = superior_limit_0 + step
     superior_limit_1 = inferior_limit_1 + 2
 
-    for value in range(inferior_limit_0, superior_limit_0):
-        subbands.append(value)
-    for value in range(inferior_limit_1, superior_limit_1):
-        subbands.append(value)
+    subbands = ListFlatter([range(inferior_limit_0, superior_limit_0), range(inferior_limit_1, superior_limit_1)])
 
     return subbands
