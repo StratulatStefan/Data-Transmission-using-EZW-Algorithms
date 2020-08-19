@@ -14,7 +14,7 @@ from api.plotter import *
 
 
 if __name__ == "__main__":
-    DWTs = np.array(([63,   -34,    49,    10,     7,    13,   -12,     7],
+    DWT = np.array(([63,   -34,    49,    10,     7,    13,   -12,     7],
                    [-31,    23,    14,   -13,     3,     4,     6,    -1],
                    [ 15,    14,     3,   -12,     5,    -7,     3,     9],
                    [ -9,    -7,   -14,     8,     4,    -2,     3,     2],
@@ -45,29 +45,41 @@ if __name__ == "__main__":
                     [3,1,8,9,5,2,9,7,-2,-5,-1,6,9,6,-1,-2],
                     [-2,2,3,-6,-3,3,4,1,1,-8,2,4,12,3,2,3]), np.int32)
 
-    #imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
-    imagePATH = "D:\Confidential\EZW Algorithm\saga.jpg"
+
+    # setam nr. nivelelor de descompunere
+    decomposition_levels = 2
+
+
+    imagePATH = "D:\Confidential\EZW Algorithm\lena.png"
+    #imagePATH = "D:\Confidential\EZW Algorithm\saga.jpg"
     try:
         image = ImageRead(imagePATH, cv.IMREAD_GRAYSCALE)
     except Exception as exc:
         BasicException(exc)
-    
-    LL, (HL, LH, HH) = pywt.dwt2(image, "haar")
-    DWT = np.zeros(LL.shape, np.float32)
-    LL, (HL, LH, HH) = pywt.dwt2(LL, "haar")
+
+    if image.shape[0] / np.power(2,decomposition_levels) <= 4:
+        raise Exception("Too much decomposition levels!")
+
+    if decomposition_levels == 1:
+        LL, (HL, LH, HH) = pywt.dwt2(image, "haar")
+        DWT = np.zeros(image.shape, np.float32)
+    else:
+        for i in range(decomposition_levels):
+            LL, (HL, LH, HH) = pywt.dwt2(image, "haar")
+            if i == decomposition_levels - 2:
+                DWT = np.zeros(LL.shape, np.float32)
+            image = LL
     r, c = LL.shape
     DWT[:r, :c] = LL
     DWT[:r, c:] = HL
     DWT[r:, :c] = LH
     DWT[r:, c:] = HH
-    Plot(image, 221, "img")
-    Plot(DWT,222,"adasda")
+    transmission_DWT = pywt.idwt2((LL, (HL, LH, HH)), "haar")
+    Plot(transmission_DWT, 221, "Transmission Recomposed")
+    Plot(DWT,222,"Transmission DWT")
 
     # extragem coordonatele dimensionale ale imaginii
     rows, cols = DWT.shape
-
-    # setam nr. nivelelor de descompunere
-    decomposition_levels = 2
 
     # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
     # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
@@ -80,12 +92,14 @@ if __name__ == "__main__":
 
     loops = 5
     subordinateList = []
+    total_time = 0
     print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     for loop in range(loops):
         # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
         start = time.perf_counter_ns()
         dominantList, coefficients = DominantPass(coefficients, (rows, cols), decomposition_levels,int(threshold / np.power(2, loop)))
         stop = time.perf_counter_ns()
+        total_time += stop - start
         print(f"Timp in secunde Dominant Pass : {(stop - start) / 1e9} s")
 
 
@@ -108,6 +122,7 @@ if __name__ == "__main__":
         start = time.perf_counter_ns()
         subordinateList = SubordinatePass(subordinateList, threshold, loop)
         stop = time.perf_counter_ns()
+        total_time += stop - start
         print(f"Timp in secunde Subordinate Pass : {(stop - start) / 1e9} s")
 
         # Observatie ! In mod obisnuit, dominantList_copy ar trebui sa contina valorile rezultate din pasul dominant (fara a tine cont de valorile
@@ -139,11 +154,11 @@ if __name__ == "__main__":
         start = time.perf_counter_ns()
         send = SendEncodings(decomposition_levels, DWT.shape, significance_map_encoding_conventions, significance_map_encoding,reconstruction_values)
         stop = time.perf_counter_ns()
+        total_time += stop - start
         print(f"Timp in secunde trimitere si recompunere : {(stop - start) / 1e9} s")
         #print(send)
         print("#############################################")
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    Plot(send,223,"asdasda")
+    Plot(send,223,"Reception DWT")
     r,c = send.shape
     r = int(r/2)
     c = int(c/2)
@@ -153,6 +168,7 @@ if __name__ == "__main__":
     HH = send[r:, c:]
     coeffs = (LL, (HL, LH, HH))
     img = pywt.idwt2(coeffs,"haar")
-    Plot(img, 224,"ssss")
+    Plot(img, 224,"Recomposed Received image")
+    print(f"Timp total: {total_time / 1e9} s")
     pyplot.show()
 

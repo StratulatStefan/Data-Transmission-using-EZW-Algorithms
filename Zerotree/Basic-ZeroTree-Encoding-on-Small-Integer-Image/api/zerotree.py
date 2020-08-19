@@ -400,80 +400,92 @@ def SendEncodings(decomposition_level, size, conventions, significance_map_encod
     coefficients = [-np.inf] * (size[0] * size[1])
     index = 0
     decomposition_levels = GetDecompositionIndices(size, decomposition_level)
-    for significant in significance_map:
+    subbands_upper_limits = []
+    coefs_len = len(coefficients)
+    for level in range(decomposition_level):
+        subbands_upper_limits.append(int(coefs_len / np.power(4, decomposition_level - level - 1)))
+    for signif_index, significant in enumerate(significance_map):
         #identificarea nivelului curent
         for idx, level in enumerate(decomposition_levels):
             upper_level = int(np.power(level[0], 2))
-            if index < upper_level:
+            if signif_index < upper_level:
                 current_level = decomposition_level - idx
                 break
+
+        # verificam tipul elementului curent
         if significant in ["POS", "NEG"]:
+            # valoarea curenta este significanta, deci extragem acest element din lista de valori si il setam in lista finala pe pozitia curenta
             if reconstruction_values != []:
                 coeff = reconstruction_values[0]
-            if len(reconstruction_values) > 1:
-                reconstruction_values = reconstruction_values[1:]
-            else:
-                reconstruction_values = []
+            reconstruction_values = reconstruction_values[1:]
             coefficients[index] = coeff
         elif significant == "Z":
             coefficients[index] = 0
         elif significant == "ZTR":
-            for level in range(current_level - 1):
-                coefficients[index] = 0
-                if current_level == decomposition_level:
-                    lower = np.power(4, level + 1) * index
-                    upper = np.power(4, level + 1) * (index + 1)
-                    for idx in range(lower, upper):
-                        coefficients[idx] = 0
-                else:
-                    divizor = index % np.power(4, current_level) - 4
-                    step = int(np.power(int(4 / 2), decomposition_level - current_level))
-                    inferior_limit_0 = np.power(4, current_level) + int(4/2) * (divizor) + 4 * int(divizor / 2)
-                    superior_limit_0 = inferior_limit_0 + step
-                    inferior_limit_1 = inferior_limit_0 + np.power(4, current_level - 1)
-                    superior_limit_1 = inferior_limit_1 + step
-                    for idx in range(inferior_limit_0, superior_limit_0):
-                        coefficients[idx] = 0
-                    for idx in range(inferior_limit_1, superior_limit_1):
-                        coefficients[idx] = 0
+            coefficients[index] = 0
+            coarser_level_upper_level = decomposition_levels[0]
+            LL_upper_limit = int(np.power(coarser_level_upper_level[0], 2) / 4)
+            if signif_index < LL_upper_limit:
+                # coeficientul curent se afla in LL, deci va trebui sa zerorizam toate elementele subordonate
+                indexes_in_subbands = list(map(lambda idcs: idcs * coarser_level_upper_level[1] + index, [1, 2, 3]))
+                if decomposition_level == 1:
+                    for subband_index in indexes_in_subbands:
+                        coefficients[subband_index] = 0
+            else:
+                indexes_in_subbands = [index]
+
+            buffer = []
+            descendents = []
+            aux_cl = current_level
+            for i in range(current_level - 1):
+                for subband_index in indexes_in_subbands:
+                    indexes = GetNextSubbands(decomposition_level, aux_cl, subbands_upper_limits, subband_index)
+                    for idx in indexes:
+                        buffer.append(idx)
+
+                for el in indexes_in_subbands:
+                    descendents.append(el)
+                for el in buffer:
+                    descendents.append(el)
+                indexes_in_subbands = np.copy(buffer)
+                aux_cl -= 1
+            descendents = set(descendents)
+            for descendent_index in descendents:
+                coefficients[descendent_index] = 0
         if -np.inf in coefficients:
             index = coefficients.index(-np.inf)
-    recomposed_wavelet_coefs = RecomposeDecodedCoefficients(size, coefficients)
+    recomposed_wavelet_coefs = RecomposeDecodedCoefficients(decomposition_level, size, coefficients)
     return recomposed_wavelet_coefs
 
 # functie folosita la receptie
 # aceasta functie primeste ca input lista de coeficienti realizata in urma procesului de decodare si formeaza matricea de coeficienti
-def RecomposeDecodedCoefficients(size, coefficients):
+# Repara aici!
+def RecomposeDecodedCoefficients(decomposition_levels, size, coefficients):
     # extragem coordonatele dimensionale pe care ar trebui sa le aiba rezultatul
     rows, cols = size
     if len(coefficients) != rows * cols:
         raise Exception("Invalid size of coefficients list!")
 
     # determinam nr. nivelelor de descompunere
-    decomposition_levels = int(math.log(len(coefficients), 4))
     levels = []
-    previous_level = 0
-    for dec_level in range(1, decomposition_levels + 1):
-        upper_level = np.power(4, dec_level)
-        if dec_level > 1:
-            i = previous_level
-            idd = dec_level
-            while i < upper_level:
-                j = i
-                lvl = []
-                upper_limit = j + np.power(4, dec_level - 1)
-                #while j < idd * np.power(2, dec_level):
-                while j < upper_limit:
-                    lvl.append(coefficients[j])
-                    j = j + 1
-                i = j
-                idd += 1
-                levels.append(lvl)
-        else:
-            for i in range(0, upper_level):
-                levels.append([coefficients[i]])
-        previous_level = upper_level
-    x = 0
+    subbands_upper_limits = []
+    coefs_len = len(coefficients)
+    for level in range(decomposition_levels):
+        subbands_upper_limits.append(int(coefs_len / np.power(4, decomposition_levels - level - 1)))
+
+    previous_upper_level = 0
+    for dec_level in range(decomposition_levels):
+        upper_band_limit = subbands_upper_limits[dec_level]
+        subband_size = int(upper_band_limit / 4)
+
+        # din fiecare banda extragem cele 4 subbenzi
+        for sbband_idx in range(4 if dec_level == 0 else 3):
+            lower_limit = sbband_idx * subband_size + previous_upper_level
+            upper_limit = (sbband_idx + 1) * subband_size + previous_upper_level
+            levels.append(coefficients[lower_limit : upper_limit])
+            print(f"{sbband_idx * subband_size + previous_upper_level, (sbband_idx + 1) * subband_size + previous_upper_level}")
+        previous_upper_level = upper_band_limit
+
     subbands = ["LL", "HL", "LH", "HH"]
     final = {}
     for dec_level in range(decomposition_levels, 0, -1):
@@ -484,26 +496,22 @@ def RecomposeDecodedCoefficients(size, coefficients):
             final[f"{subband}{dec_level}"] = coeffs
 
     finalMatrix = np.zeros(size, np.float32)
-    prev_row = 0
-    prev_col = 0
+    prev_level = 0
     for dec_level in range(decomposition_levels, 0, -1):
-        row_level = np.power(2, decomposition_levels - dec_level + 1)
-        col_level = np.power(2, decomposition_levels - dec_level + 1)
-        row_level_half = int(row_level / 2)
-        col_level_half = int(col_level / 2)
+        current_level = int(np.sqrt(subbands_upper_limits[decomposition_levels - dec_level]))
+        current_level_half = int(current_level / 2)
 
         HL = ArrayToSquareMatrix(final[f"HL{dec_level}"])
         LH = ArrayToSquareMatrix(final[f"LH{dec_level}"])
         HH = ArrayToSquareMatrix(final[f"HH{dec_level}"])
         if dec_level == decomposition_levels:
             LL = ArrayToSquareMatrix(final[f"LL{dec_level}"])
-            finalMatrix[prev_row:row_level_half, prev_col : col_level_half] = LL
-        finalMatrix[:row_level_half, col_level_half:col_level] = HL
-        finalMatrix[col_level_half : col_level, : col_level_half] = LH
-        finalMatrix[col_level_half : col_level, col_level_half:col_level] = HH
+            finalMatrix[prev_level:current_level_half, prev_level : current_level_half] = LL
+        finalMatrix[:current_level_half, current_level_half:current_level] = HL
+        finalMatrix[current_level_half : current_level, : current_level_half] = LH
+        finalMatrix[current_level_half: current_level, current_level_half:current_level] = HH
 
-        prev_row = row_level
-        prev_col = col_level
+        prev_level = current_level
     return finalMatrix
 
 def AnalyzeDescendents(levels, upper_limits, coefficients, index, subbands):
@@ -531,7 +539,7 @@ def AnalyzeDescendents(levels, upper_limits, coefficients, index, subbands):
     aux_cl = current_level
     for i in range(current_level - 1):
         for index in indexes_in_subbands:
-            indexes = GetNextSubbands(decomposition_levels, aux_cl, upper_limits, index, coefficients)
+            indexes = GetNextSubbands(decomposition_levels, aux_cl, upper_limits, index)
             for idx in indexes:
                 buffer.append(idx)
 
@@ -545,9 +553,9 @@ def AnalyzeDescendents(levels, upper_limits, coefficients, index, subbands):
     descendents = set(descendents)
     return None, descendents
 
-def GetNextSubbands(decomposition_levels, current_level,upper_limits,index, coeffs):
+def GetNextSubbands(decomposition_levels, current_level,upper_limits,index):
     subbands = []
-    band_size = int(upper_limits[decomposition_levels - current_level + 1]/4)
+    band_size = int(upper_limits[decomposition_levels - current_level + 1] / 4)
     subband_size = int(band_size / 4)
     current_subband = int(index / subband_size)
     index_in_subband = index % subband_size
