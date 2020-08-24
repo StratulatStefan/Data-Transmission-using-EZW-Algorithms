@@ -16,9 +16,10 @@ class UI_Worker:
         rows, cols = image.shape
         # valorile coeficientilor pot depasi intervalul de reprezentare 0-255.
         # astfel, coeficientii trebuie normalizati pentru a apartine intervalului specific Grayscale (0-255)
-        cv.normalize(image, image, alpha=0, beta=255, norm_type=cv.NORM_MINMAX)
+        img = np.copy(image)
+        cv.normalize(src=image, dst=img, alpha=0, beta=255, norm_type=cv.NORM_MINMAX)
 
-        img = np.require(image, np.uint8, 'C')
+        img = np.require(img, np.uint8, 'C')
         img = QImage(img.data, cols, rows, cols, QImage.Format_Indexed8)
 
         return QPixmap.fromImage(img)

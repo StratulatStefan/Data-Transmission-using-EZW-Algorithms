@@ -7,17 +7,22 @@
 
 # inainte de a incarca codul sursa generat de QT, vom face conversia de la .ui la .py folosind pyside2-uic
 import os
+import multiprocessing
 
+from PySide2 import QtCore
+from PySide2.QtCore import QTimer
 from PySide2.QtGui import QMovie
 
 from api.wavelets import *
 import time
-os.system("pyside2-uic transmission.ui > transmission_gui.py")
+#os.system("pyside2-uic transmission.ui > transmission_gui.py")
 
 # - am facut conversia interfetei la cod sursa; urmeaza, asadar, sa incarcam acest cod in programul principal si sa il
 # utilizam
 from transmission_gui import *
 from worker import *
+from api.zerotree import *
+from api.encoder import *
 
 # definim un obiect global care va contine imaginea ce va fi incarcata din GUI
 # acest obiect va fi folosit in prelucrarile ulterioare din algoritm
@@ -25,6 +30,9 @@ global_image = []
 
 # definim obiectul global ce va contine descompunerea imaginii in coeficienti Wavelet
 wavelet_decomposition = []
+
+# definim un obiect care va contine o instanta a conexiunii dintre cele doua noduri
+connection = None
 
 class GraphicalUserInterface(Ui_MainWindow):
     def __init__(self, window):
@@ -94,6 +102,12 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # atasam functia de callback pentru modificarea tipului de operatie DWT efectuata
         self.DWT_type.currentTextChanged.connect(self.SetWaveletTypes)
+
+        # atasam functia de callback pentru codificarea cu ZeroTree si trimiterea catre celalalt nod
+        self.encode_and_send.clicked.connect(self.ZeroTreeEncodingAndSend)
+
+        # atasam functia de callback pentru cautarea si stabilirea de conexiuni
+        self.check_connections.clicked.connect(self.CheckForConnections)
 
     # functie pentru tratarea DWT
     def Wavelet_Decomposition(self):
@@ -262,4 +276,123 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # - dupa ce descompunerea se va realiza cu succes, se vor apela functii in firul principal care vor
         # inlocui aceasta imagine si vor face campul de parametri vizibil
+
+    # functia de codificare cu ZeroTree si trimitere catre celalalt nod
+    def ZeroTreeEncodingAndSend(self):
+        global wavelet_decomposition
+        # in primul rand, aceasta functie nu poate fi apelata daca nu s-a generat lista de coeficienti (nu s-a efectuat DWT)
+        if wavelet_decomposition == []:
+            exception = Exception("Could not execute ZeroTree Encoding and Sending before Loading the image "
+                                  "and Makind the Wavelet Decomposition !")
+            self.HandleBasicException(exception)
+            return
+
+        # extragem numarul de iteratii si nr. nivelelor de descompunere
+        loops = self.loops.value()
+        decomposition_levels = int(self.decomposition_levels.text())
+
+        # extragem coordonatele dimensionale ale imaginii
+        rows, cols = wavelet_decomposition.shape
+
+        # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
+        # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
+        coefficients = ReorganizeMatrix(wavelet_decomposition, decomposition_levels)  # < 100 microsecunde
+
+        # obtinem threshold-ul initial
+        threshold = GetInitialThreshold(wavelet_decomposition)
+
+        nof_bites_needed = int(np.ceil(np.log2(np.max(wavelet_decomposition))))
+        matrix_size = rows * cols * nof_bites_needed
+        print(f"Matricea de coeficienti contine {BytestoKBytes(BitestoBytes(matrix_size))} Kb")
+
+        # curatam elemente de pe interfata ce vor afisa parametrii
+        self.encoding_significance_map.clear()
+        self.encoding_time.clear()
+        self.encoding_reconstruction_values.clear()
+        self.encoding_total.clear()
+        self.encoding_difference.clear()
+        self.encoding_compression.clear()
+        self.encoding_current_iteration.clear()
+
+        subordinateList = []
+        for loop in range(loops):
+            self.encoding_current_iteration.setText(str(loop + 1))
+            self.encoding_current_iteration.repaint()
+            start = time.time_ns()
+
+            # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
+            dominantList, coefficients = DominantPass(coefficients, (rows, cols), decomposition_levels,
+                                                      int(threshold / np.power(2, loop)))
+
+            # Extragem lista subordonata, care contine coeficientii care au fost determinati ca fiind significant in urma pasului dominant
+            auxiliary = IdentifySignificants(dominantList)
+            for aux in auxiliary:
+                subordinateList.append(aux)
+
+            dominantList_copy = np.copy(dominantList)
+
+            # pastram doar valorile insignificante in dominantList, intrucat urmatorul pas dominant va parcurge doar aceste valori (insignificante)
+            # dominantList contine valorile significante, care se afla si in subordonateList
+            # asadar, pentru a determina valorile insignificante, facem diferenta celor doua liste
+            dominantList = ListsDifference(dominantList, subordinateList)
+
+            # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
+            subordinateList = SubordinatePass(subordinateList, threshold, loop)
+
+            # Observatie ! In mod obisnuit, dominantList_copy ar trebui sa contina valorile rezultate din pasul dominant (fara a tine cont de valorile
+            # de reconstructie rezultate din pasul subordonat)
+            # Insa, elementele significate cu valorile de reconstructie modificate rezultate din pasul subordonat sunt referinte la elementele din dominant List
+            # de acelasi tip.
+            # Asadar, cand se efectueaza pasul subordonat, valorile significante din dominantList_copy capata noile valori.
+            # Din acest motiv, este suficient sa furnizam doar dominantList_copy, fara a furniza si valorile din subordonate List (se afla deja in dominantList_copy)
+            sendList = GenerateSequenceToSend(dominantList_copy)
+
+            # formatul listei de trimis [[significante_map_element, reconstruction_value]...]
+            # extragem significance_map si lista valorilor de reconstructie pentru encodare si trimitere separata
+            significance_map = list(map(lambda item: item[0], sendList))
+            reconstruction_values = list(map(lambda item: item[1], sendList))
+
+            # determinam conventiile de codificare a significance map (vor fi trimise inainte de imagine pentru ca decodorul sa stie cum sa interpreteze rezultatele)
+            significance_map_encoding_conventions = SignificanceMapEncodingConventions()
+
+            # codificam valorile de trimis astfel incat sa reducem nr. de biti necesari
+            significance_map_encoding = SignificanceMapEncoding(significance_map, significance_map_encoding_conventions)
+
+            # determinarea valorilor de 0 din lista de coeficienti se face pe baza significance map
+            # asadar, eliminam coeficientii nuli din lista coeficientilor
+            reconstruction_values = list(filter(lambda item: item != 0, reconstruction_values))
+
+            stop = time.time_ns()
+            self.encoding_time.setText(f"{(stop - start) / 1e9} s")
+
+
+            signif_map_bites_needed = 3
+            reconstruction_values_bites_needed = int(np.ceil(np.log2(np.max(reconstruction_values))))
+            len_items_to_send = len(significance_map_encoding) * signif_map_bites_needed + \
+                                len(reconstruction_values) * reconstruction_values_bites_needed
+            print("#######################################################")
+
+            self.encoding_significance_map.setText(f"{BytestoKBytes(BitestoBytes(len(significance_map_encoding) * signif_map_bites_needed))} Kb")
+            self.encoding_reconstruction_values.setText(f"{BytestoKBytes(BitestoBytes(len(reconstruction_values) * reconstruction_values_bites_needed))} Kb")
+            self.encoding_total.setText(f"{BytestoKBytes(BitestoBytes(len_items_to_send))} Kb")
+            self.encoding_difference.setText(f"{BytestoKBytes(BitestoBytes(matrix_size - len_items_to_send))} Kb")
+            self.encoding_compression.setText(f"{round(matrix_size / len_items_to_send, 2)}")
+    #        self.connection_status
+
+    def toExecute(self):
+        initialText = "Trying to connect"
+        currentText = None
+        for i in range(50):
+            if i % 4 == 0:
+                currentText = initialText
+            else:
+                currentText = currentText + "."
+            time.sleep(0.5)
+            self.connection_status.setText(currentText)
+            self.connection_status.repaint()
+
+    # functie care incearca conectarea cu celalalt nod
+    # functia salveaza instanta conexiunii intr-un obiect global
+    def CheckForConnections(self):
+        # gaseste o solutie de multithreading aici!
 

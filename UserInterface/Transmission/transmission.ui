@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1748</width>
+    <width>1723</width>
     <height>1008</height>
    </rect>
   </property>
@@ -23,7 +23,7 @@
    <widget class="QLabel" name="title">
     <property name="geometry">
      <rect>
-      <x>170</x>
+      <x>460</x>
       <y>20</y>
       <width>732</width>
       <height>33</height>
@@ -46,7 +46,7 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>10</x>
       <y>100</y>
       <width>541</width>
       <height>821</height>
@@ -341,7 +341,7 @@
    <widget class="QGroupBox" name="image_box">
     <property name="geometry">
      <rect>
-      <x>600</x>
+      <x>560</x>
       <y>100</y>
       <width>561</width>
       <height>851</height>
@@ -724,7 +724,7 @@
    <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
-      <x>1210</x>
+      <x>1150</x>
       <y>100</y>
       <width>511</width>
       <height>851</height>
@@ -752,6 +752,59 @@
      <property name="title">
       <string>Connection</string>
      </property>
+     <widget class="QPushButton" name="check_connections">
+      <property name="geometry">
+       <rect>
+        <x>110</x>
+        <y>200</y>
+        <width>231</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Check for connections</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="select_image_label_14">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>50</y>
+        <width>211</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
+      </property>
+      <property name="text">
+       <string>Connection Status</string>
+      </property>
+     </widget>
+     <widget class="QTextEdit" name="connection_status">
+      <property name="geometry">
+       <rect>
+        <x>190</x>
+        <y>60</y>
+        <width>251</width>
+        <height>31</height>
+       </rect>
+      </property>
+     </widget>
     </widget>
     <widget class="QSpinBox" name="loops">
      <property name="geometry">
@@ -799,6 +852,257 @@
       <string>Thresholding Iterations</string>
      </property>
     </widget>
+    <widget class="QLabel" name="select_image_label_7">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>440</y>
+       <width>211</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Current Iteration</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="encoding_current_iteration">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>440</y>
+       <width>104</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="select_image_label_8">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>500</y>
+       <width>211</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Encoding Time</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="encoding_time">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>500</y>
+       <width>131</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="encoding_significance_map">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>560</y>
+       <width>151</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="select_image_label_9">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>560</y>
+       <width>241</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Significace Map Size</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="encoding_reconstruction_values">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>630</y>
+       <width>151</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="select_image_label_10">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>620</y>
+       <width>211</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Reconstruction Values</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="encoding_difference">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>730</y>
+       <width>151</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="select_image_label_12">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>730</y>
+       <width>151</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Difference</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="encoding_compression">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>790</y>
+       <width>104</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="select_image_label_13">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>790</y>
+       <width>211</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Compression</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="encode_and_send">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>370</y>
+       <width>291</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>ZeroTree Encode and Send</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="encoding_total">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>680</y>
+       <width>151</width>
+       <height>31</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="select_image_label_15">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>680</y>
+       <width>151</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Total</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -806,7 +1110,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1748</width>
+     <width>1723</width>
      <height>26</height>
     </rect>
    </property>
