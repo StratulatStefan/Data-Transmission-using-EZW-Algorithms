@@ -4,23 +4,27 @@ import os
 import time
 import sys
 
-# functie care verifica daca mesajul primit reprezinta numele fisierului
 # numele fisierului se identifica astfel : [nume] <nume_fisier>.<extensie>
-# numele fisierului nu poate fi identificat daca:
-# 1). nu contine [nume]
+def CheckForFileName(content):
+	return CheckForParameter(content, "filename")
+
+# functie care verifica daca mesajul primit reprezinta un parametru
+# parametrul nu poate fi identificat daca:
+# 1). nu contine [tip_parametru]
 # 2). primim exceptie din cauza imposibilitatii de a decoda octetii la codec-ul utf-8
-def CheckForFilename(content):
+def CheckForParameter(content, type):
 	try:
 		data = data_decode(content)
 		print(data)
-		if "[nume]" in data:
+		if f"[{type}]" in data:
 			return True
 	except UnicodeDecodeError:
 		pass
 	return False
 
 # functie care extrage numele fisierului din mesajul primit
-def ExtractFileName(content):
+def ExtractParameter(content):
+	content = data_decode(content)
 	pattern = "\s.+"
 	matches = re.findall(pattern, content)
 	return matches[0][1:]
@@ -33,38 +37,70 @@ def CheckForExistanceAndDelete(filename):
 		os.remove(filename)
 
 # functia care realizeaza transmiterea fisierelor prin TCP
-def TCPCommunication(connection):
-	print("-------------------------------")
-	with connection:
-		# bucla infinita pentru receptia de pachete de octeti
-		while True:
-			print("***********************")
-			print("Waiting for data...")
-			# asteptam (blocant) receptionarea a 1024 de octeti
-			data = socketREAD(connection)
+def TCPCommunication(gui_handler, printer, connection):
+	printer("-------------------------------")
+	# bucla infinita pentru receptia de pachete de octeti
+	parameters_found = 0
+	parameters = [{"type": "filename",
+				   "text_label": "numele imaginii",
+				   "ui_object": gui_handler.image_name},
+				  {"type": "dimensions",
+				   "text_label": "dimensiunile imaginii",
+				   "ui_object": gui_handler.image_dimensions},
+				  {"type": "size",
+				   "text_label": "dimensiunea imaginii",
+				   "ui_object": gui_handler.image_size},
+				  {"type": "decomposition_levels",
+				   "text_label": "nr. nivelelor de descompunere",
+				   "ui_object": gui_handler.image_decomposition_levels},
+				  {"type": "decomposition_type",
+				   "text_label": "algoritmul de descompunere",
+				   "ui_object": gui_handler.wavelet_algorithm},
+				  {"type": "wavelet_type",
+				   "text_label": "tipul de wavelet folosit",
+				   "ui_object": gui_handler.wavelet_type},
+				  {"type": "iteration_loops",
+				   "text_label": "nr. de iteratii de codificare",
+				   "ui_object": gui_handler.image_expected_iterations},
+				  {"type": "conventions",
+				   "text_label": "conventiile significance map",
+				   "ui_object": gui_handler.significance_map_conventions},
+				  ]
+	while True:
+		printer("Waiting for data...")
+		# asteptam (blocant) receptionarea a 1024 de octeti
+		data = socketREAD(connection)
 
-			# verificam daca am primit numele fisierului
-			if CheckForFilename(data):
-				# am primit numele fisierului
-				# facem conversia la string si salvam numele fisierului
-				fname = data_decode(data)
-				filename = ExtractFileName(fname)
-				print(f"* Am primit numele fisierului : {filename}!")
-				CheckForExistanceAndDelete(filename)
+		# verificam daca am primit numele fisierului
+		for parameter in parameters:
+			if CheckForParameter(data, parameter["type"]):
+				# am primit un parametru
+				# facem conversia la string si il salvam
+				parameter_data = ExtractParameter(data)
+				printer(f'* Am primit {parameter["text_label"]} : {parameter_data}!')
+				#setam numele pe labelul de pe interfata
+				parameter["ui_object"].setText(parameter_data)
+				parameter["ui_object"].repaint()
 				time.sleep(0.25)
-			else:
-				# am primit un pachet de octeti din continutul fisierului
-				print("* Am primit un pachet de date!")
+				parameters_found += 1
+				break
+		if parameters_found == len(parameters):
+			break
+		'''
+		else:
+			# am primit un pachet de octeti din continutul fisierului
+			print("* Am primit un pachet de date!")
 
-				# folosim "ab" (append binary) deoarece scrierea fisierului
-				# se face secvential, la fiecare iteratie a buclei while (cu fiecare pachet primit)
-				# este mai eficient decat a pastra fisierul in memorie si a-l scrie la final
-				with open(filename, "ab") as file:
-					file.write(data)
+			# folosim "ab" (append binary) deoarece scrierea fisierului
+			# se face secvential, la fiecare iteratie a buclei while (cu fiecare pachet primit)
+			# este mai eficient decat a pastra fisierul in memorie si a-l scrie la final
+			with open(filename, "ab") as file:
+				file.write(data)
+		'''
 
 
 # functia care realizeaza transmiterea fisierelor prin UART
-def UARTCommunication(connection):
+def UARTCommunication(gui_handler, printer, connection):
 	# bucla infinita pentru asteptarea de pachete de octeti
 	while True:
 		print("----------------------------------------")

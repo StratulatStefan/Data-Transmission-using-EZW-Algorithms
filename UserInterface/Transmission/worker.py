@@ -35,3 +35,11 @@ class UI_Worker:
 
         # convertim imaginea grayscale la formatul pixmap
         return QPixmap.fromImage(grayscale)
+
+    # functie pentru extragerea numelui fisierului dintr-un url
+    @staticmethod
+    def ExtractFileName(path : str):
+        # numele fisierului se afla dupa ultimul "/"
+        indexOfBackSlash = path.rfind("/")
+
+        return path[indexOfBackSlash + 1:]

@@ -49,6 +49,12 @@ config = {
 	"port" : 7000 		  # PORT-ul pe care serverul asculta
 }
 
+def SafeClose():
+    if connection_established == True:
+        print("Safe Close! Good Bye!")
+        connection.close() if connection != None else None
+        sock.close() if sock != None else None
+
 class GraphicalUserInterface(Ui_MainWindow):
     def __init__(self, window):
         self.setupUi(window)
@@ -309,6 +315,12 @@ class GraphicalUserInterface(Ui_MainWindow):
             self.HandleBasicException(exception)
             return
 
+        # curatam consola de afisare a statusului!
+        self.connection_status.clear()
+
+        self.SendParameters()
+
+
         # extragem numarul de iteratii si nr. nivelelor de descompunere
         loops = self.loops.value()
         decomposition_levels = int(self.decomposition_levels.text())
@@ -399,7 +411,55 @@ class GraphicalUserInterface(Ui_MainWindow):
             self.encoding_total.setText(f"{BytestoKBytes(BitestoBytes(len_items_to_send))} Kb")
             self.encoding_difference.setText(f"{BytestoKBytes(BitestoBytes(matrix_size - len_items_to_send))} Kb")
             self.encoding_compression.setText(f"{round(matrix_size / len_items_to_send, 2)}")
-    #        self.connection_status
+
+    def SendParameters(self):
+        global connection
+
+        # definim functia de trimitere a datelor prin socket
+        def EncodeAndSend(printer,message, type):
+            data_to_send = data_encode(f"[{type}] {message}")
+            printer(f"Trimitem {type} : {message}")
+            socketWRITE(connection, data_to_send)
+            time.sleep(0.25)
+            printer(f"{type} a fost trimis cu succes!")
+            time.sleep(0.25)
+
+        # trimitem numele imaginii
+        filepath = self.image_source.toPlainText()
+        filename = UI_Worker.ExtractFileName(filepath)
+        EncodeAndSend(self.SetConnectionStatus,filename, "filename")
+
+        # trimitem coordonatele dimensionale ale imaginii
+        width = self.image_width.toPlainText()
+        height = self.image_height.toPlainText()
+        dimensions = f"{width} x {height}"
+        EncodeAndSend(self.SetConnectionStatus,dimensions, "dimensions")
+
+        # trimitem dimensiunea in kb a imaginii
+        size = self.image_size.toPlainText()
+        EncodeAndSend(self.SetConnectionStatus,size,  "size")
+
+        # trimitem nr. nivelelor de descompunere
+        dec_levels = self.decomposition_levels.text()
+        EncodeAndSend(self.SetConnectionStatus,dec_levels, "decomposition_levels")
+
+        # trimitem tipul de alg. folosit in descompunere
+        alg_dwt_type = self.DWT_type.currentText()
+        EncodeAndSend(self.SetConnectionStatus,alg_dwt_type, "decomposition_type")
+
+        # trimitem tipul de wavelet folosit
+        wavelet_type = self.wavelet_type.currentText()
+        EncodeAndSend(self.SetConnectionStatus,wavelet_type, "wavelet_type")
+
+        # trimitem nr. de iteratii
+        loops = self.loops.text()
+        EncodeAndSend(self.SetConnectionStatus,loops, "iteration_loops")
+
+        # trimitem encodarea significance map
+        signif_map_conventions = str(SignificanceMapEncodingConventions())
+        EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions")
+
+
 
     # functie pentru setarea label-ului ce descrie statusul conexiunii
     def SetConnectionStatus(self, text):
@@ -408,7 +468,6 @@ class GraphicalUserInterface(Ui_MainWindow):
         self.connection_status.repaint()
         self.consoleLock.release()
         time.sleep(0.025)
-
 
     # functie care incearca conectarea cu celalalt nod
     # functia salveaza instanta conexiunii intr-un obiect global

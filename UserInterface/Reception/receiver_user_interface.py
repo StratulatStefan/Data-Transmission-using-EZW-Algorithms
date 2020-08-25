@@ -50,6 +50,11 @@ config = {
 	"port" : 7000		  # PORT-ul pe care este mapat serverul
 }
 
+def SafeClose():
+    if connection_established == True:
+        print("Safe Close! Good Bye!")
+        connection.close() if connection != None else None
+        sock.close() if sock != None else None
 
 class GraphicalUserInterface(Ui_MainWindow):
     def __init__(self, window):
@@ -485,13 +490,13 @@ class GraphicalUserInterface(Ui_MainWindow):
 						# asteptam reluarea handshake-ului si primirea unui tip valid
                     break
 
+        # curatam consola de afisare a statusului!
+        self.connection_status.clear()
         if communication_type in [0, 1]:
             # daca am ajuns aici, inseamna ca handshake-ul a fost efectua cu succes si putem incepe transmiterea
             if communication_type == 0:
-                #TCPCommunication(connection)
-                print("TCP")
+                TCPCommunication(self, self.SetConnectionStatus, connection)
             else:
-                #UARTCommunication(connection)
-                print("UART")
-
+                #UARTCommunication(self, self.SetConnectionStatus, connection)
+                pass
 
