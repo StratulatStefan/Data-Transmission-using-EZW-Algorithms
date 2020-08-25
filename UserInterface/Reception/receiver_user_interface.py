@@ -435,6 +435,7 @@ class GraphicalUserInterface(Ui_MainWindow):
         # AF-INET pentru familia de adrese IPv4
         # SOCK_STREAM pentru comunicare prin TCP
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
         self.SetConnectionStatus("Socket-ul a fost deschis cu succes...")
         time.sleep(0.5)
         self.SetConnectionStatus("Se realizeaza conectarea la server...")

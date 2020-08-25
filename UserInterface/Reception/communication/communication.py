@@ -2,6 +2,7 @@ from communication.general_use import *
 import re
 import os
 import time
+from api.decoder import *
 import sys
 
 # numele fisierului se identifica astfel : [nume] <nume_fisier>.<extensie>
@@ -15,7 +16,6 @@ def CheckForFileName(content):
 def CheckForParameter(content, type):
 	try:
 		data = data_decode(content)
-		print(data)
 		if f"[{type}]" in data:
 			return True
 	except UnicodeDecodeError:
@@ -38,9 +38,13 @@ def CheckForExistanceAndDelete(filename):
 
 # functia care realizeaza transmiterea fisierelor prin TCP
 def TCPCommunication(gui_handler, printer, connection):
+	global significance_map
 	printer("-------------------------------")
 	# bucla infinita pentru receptia de pachete de octeti
-	parameters_found = 0
+	parameters_found = False
+
+
+
 	parameters = [{"type": "filename",
 				   "text_label": "numele imaginii",
 				   "ui_object": gui_handler.image_name},
@@ -71,7 +75,7 @@ def TCPCommunication(gui_handler, printer, connection):
 		# asteptam (blocant) receptionarea a 1024 de octeti
 		data = socketREAD(connection)
 
-		# verificam daca am primit numele fisierului
+		# verificam daca am primit un parametru : mesaj de tipul "[type] content"
 		for parameter in parameters:
 			if CheckForParameter(data, parameter["type"]):
 				# am primit un parametru
@@ -82,21 +86,17 @@ def TCPCommunication(gui_handler, printer, connection):
 				parameter["ui_object"].setText(parameter_data)
 				parameter["ui_object"].repaint()
 				time.sleep(0.25)
-				parameters_found += 1
+				parameters_found = True
 				break
-		if parameters_found == len(parameters):
-			break
-		'''
+		if parameters_found == True:
+			continue
 		else:
-			# am primit un pachet de octeti din continutul fisierului
-			print("* Am primit un pachet de date!")
+			# nu am primit un parametru, deci primim significance map sau valorile de reconstructie
+			printer("* Am primit un pachet de date!")
+			significance_map.append(data)
+	print(significance_map)
+	x = 0
 
-			# folosim "ab" (append binary) deoarece scrierea fisierului
-			# se face secvential, la fiecare iteratie a buclei while (cu fiecare pachet primit)
-			# este mai eficient decat a pastra fisierul in memorie si a-l scrie la final
-			with open(filename, "ab") as file:
-				file.write(data)
-		'''
 
 
 # functia care realizeaza transmiterea fisierelor prin UART

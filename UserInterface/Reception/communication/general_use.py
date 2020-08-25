@@ -1,5 +1,8 @@
 import re
 
+significance_map = []
+reconstruction_values = None
+
 # functie lambda care codifica un mesaj din format string in format binar
 data_encode = lambda message : message.encode("utf-8")
 
@@ -45,7 +48,11 @@ def uartWRITEMessage(port, message):
 # functie pentru citirea octetilor din socket-ul TCP
 def socketREAD(sock):
         # citim si returnam 1024 de octeti din socket
-	return sock.recv(1024)
+	try:
+		return sock.recv(1024)
+	except Exception:
+		print(len(significance_map))
+		print(significance_map)
 
 # functie pentru citirea unui mesaj de pe socket-ul TCP
 def socketREADMessage(sock):
@@ -71,3 +78,22 @@ def uartREADMessage(port):
         # decodam si returnam mesajul
 	return data_decode(data)
 
+# functie pentru transformarea unui string intr-un dictionar
+def StringToDictionary(message : str) -> dict :
+	result = {}
+	# eliminam parantezele acolade delimitatoare care se afla pe prima si ultima pozitie
+	message = message[1:-1]
+	# - elementele sunt delimitate prin virgule, asa ca spargem string-ul in mai multe
+	# substring-uri, avand virgula ca delimitator
+	components = message.split(",")
+	# in acest punct, avem componente de forma : "cheie" : "valoare"
+	for component in components:
+		# eliminam ghilimelele si spatiile libere
+		component = component.replace("\"","")
+		component = component.replace("\'","")
+		component = component.replace(" ","")
+		# spargem componenta dupa ":"
+		key, value = component.split(":")
+		result[f"{key}"] = value
+
+	return result

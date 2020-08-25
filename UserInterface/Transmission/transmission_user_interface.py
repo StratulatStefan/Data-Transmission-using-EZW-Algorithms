@@ -318,8 +318,8 @@ class GraphicalUserInterface(Ui_MainWindow):
         # curatam consola de afisare a statusului!
         self.connection_status.clear()
 
+        # trimitem toti parametrii necesari catre celalalt nod
         self.SendParameters()
-
 
         # extragem numarul de iteratii si nr. nivelelor de descompunere
         loops = self.loops.value()
@@ -399,6 +399,7 @@ class GraphicalUserInterface(Ui_MainWindow):
             stop = time.time_ns()
             self.encoding_time.setText(f"{(stop - start) / 1e9} s")
 
+            self.SendCoefficients(significance_map_encoding, reconstruction_values)
 
             signif_map_bites_needed = 3
             reconstruction_values_bites_needed = int(np.ceil(np.log2(np.max(reconstruction_values))))
@@ -460,6 +461,30 @@ class GraphicalUserInterface(Ui_MainWindow):
         EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions")
 
 
+    def SendCoefficients(self, significance_map, reconstruction_values):
+        global connection
+        # convertim cele doua liste de valori intregi la liste de valori binare
+        significance_map_binary = str(significance_map).encode("utf-8")
+        reconstruction_values_binary = str(reconstruction_values).encode("utf-8")
+
+        # trimitem significance map
+        self.SetConnectionStatus("* Trimitem significance map")
+        print(significance_map)
+        print(significance_map_binary)
+        socketWRITE(connection, significance_map_binary)
+        time.sleep(1)
+        self.SetConnectionStatus("* Am trimis significance map")
+        time.sleep(1)
+
+        # trimitem valorile de reconstructie
+        self.SetConnectionStatus("* Trimitem valorile de reconstructie")
+        socketWRITE(connection, reconstruction_values_binary)
+        time.sleep(1)
+        self.SetConnectionStatus("* Am trimis valorile de reconstructie")
+
+        # trimitem mesajul de finalizare
+        socketWRITEMessage(connection, "[stop]")
+        x = 0
 
     # functie pentru setarea label-ului ce descrie statusul conexiunii
     def SetConnectionStatus(self, text):
