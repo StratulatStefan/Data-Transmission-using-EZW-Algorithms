@@ -7,15 +7,12 @@
 
 # inainte de a incarca codul sursa generat de QT, vom face conversia de la .ui la .py folosind pyside2-uic
 import os
-import multiprocessing
-
-from PySide2 import QtCore
-from PySide2.QtCore import QTimer
-from PySide2.QtGui import QMovie
-
-from api.wavelets import *
+import socket
+import serial
 import time
-#os.system("pyside2-uic transmission.ui > transmission_gui.py")
+import re
+
+os.system("pyside2-uic transmission.ui > transmission_gui.py")
 
 # - am facut conversia interfetei la cod sursa; urmeaza, asadar, sa incarcam acest cod in programul principal si sa il
 # utilizam
@@ -23,6 +20,11 @@ from transmission_gui import *
 from worker import *
 from api.zerotree import *
 from api.encoder import *
+from communication.handshake import *
+from communication.general_use import *
+from communication.communication import *
+from api.wavelets import *
+import threading
 
 # definim un obiect global care va contine imaginea ce va fi incarcata din GUI
 # acest obiect va fi folosit in prelucrarile ulterioare din algoritm
@@ -31,14 +33,28 @@ global_image = []
 # definim obiectul global ce va contine descompunerea imaginii in coeficienti Wavelet
 wavelet_decomposition = []
 
+# definim un obiect care va contine o instanta a socket-ului prin care se va realiza conexiunea
+sock = None
+
 # definim un obiect care va contine o instanta a conexiunii dintre cele doua noduri
 connection = None
+
+# definim un obiect de tip Boolean folosit pentru validarea stabilirii conexiunii
+connection_established = False
+
+# definim un dictionar care va contine credentialele de comunicare
+config = {
+	#"host" : "192.168.43.43", # HOST-ul serverului
+	"host" : "192.168.43.226",
+	"port" : 7000 		  # PORT-ul pe care serverul asculta
+}
 
 class GraphicalUserInterface(Ui_MainWindow):
     def __init__(self, window):
         self.setupUi(window)
         window.setFixedSize(window.size())
         self.ExtraObjectAttributes()
+        self.consoleLock = threading.RLock()
 
     # - functie care adauga anumite atribute elementelor interfetei
     # - adaugarea acestor atribute se efectueaza aici intrucat, la fiecare modificare a interfetei grafice, codul sursa al
@@ -280,10 +296,16 @@ class GraphicalUserInterface(Ui_MainWindow):
     # functia de codificare cu ZeroTree si trimitere catre celalalt nod
     def ZeroTreeEncodingAndSend(self):
         global wavelet_decomposition
+        global connection_established
         # in primul rand, aceasta functie nu poate fi apelata daca nu s-a generat lista de coeficienti (nu s-a efectuat DWT)
+        # de asemenea, trebuie sa avem conexiunea stabilita pentru a putea trimite datele
         if wavelet_decomposition == []:
             exception = Exception("Could not execute ZeroTree Encoding and Sending before Loading the image "
                                   "and Makind the Wavelet Decomposition !")
+            self.HandleBasicException(exception)
+            return
+        elif connection_established == False:
+            exception = Exception("Could not execute ZeroTree Encoding and Sending before Establishing the connection!")
             self.HandleBasicException(exception)
             return
 
@@ -379,20 +401,92 @@ class GraphicalUserInterface(Ui_MainWindow):
             self.encoding_compression.setText(f"{round(matrix_size / len_items_to_send, 2)}")
     #        self.connection_status
 
-    def toExecute(self):
-        initialText = "Trying to connect"
-        currentText = None
-        for i in range(50):
-            if i % 4 == 0:
-                currentText = initialText
-            else:
-                currentText = currentText + "."
-            time.sleep(0.5)
-            self.connection_status.setText(currentText)
-            self.connection_status.repaint()
+    # functie pentru setarea label-ului ce descrie statusul conexiunii
+    def SetConnectionStatus(self, text):
+        self.consoleLock.acquire()
+        self.connection_status.append(text)
+        self.connection_status.repaint()
+        self.consoleLock.release()
+        time.sleep(0.025)
+
 
     # functie care incearca conectarea cu celalalt nod
     # functia salveaza instanta conexiunii intr-un obiect global
     def CheckForConnections(self):
-        # gaseste o solutie de multithreading aici!
+        global connection_established
+        global sock
+        global connection
+
+        # verificare coresp celei de-a doua stari a butonului, cea de oprire a conexiunii
+        if connection_established == True and connection != None:
+            connection.close()
+            sock.close()
+            self.SetConnectionStatus("Conexiunea a fost inchisa cu succes...")
+            return
+
+        self.SetConnectionStatus("Se deschide socket-ul...")
+        time.sleep(0.5)
+        # AF-INET pentru familia de adrese IPv4
+        # SOCK_STREAM pentru comunicare prin TCP
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # setam posibilitatea de a refolosi o adresa deja folosita
+        # pentru a preintampina o eroare care apare din cauza inchiderii fortate a conexiunii
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # asocierea socket-uui cu o interfata specifica de retea si un port
+        sock.bind((config["host"], config["port"]))
+        self.SetConnectionStatus("Socket-ul a fost deschis cu succes...")
+        time.sleep(0.5)
+        self.SetConnectionStatus("Se asteapta clienti...")
+        sock.listen()
+
+        # asteptam conectarea unui client
+        # apelam functia blocanta ce va returna conectiunea si adresa clientului
+        connection, address = sock.accept()
+
+        # clientul este conectat si putem incepe comunicarea
+        self.SetConnectionStatus(f"S-a conectat un client : \n{address}")
+        time.sleep(0.5)
+
+        # modificam butonul de realizare a conexiunii si setam flagul coresp.
+        self.check_connections.setText("Stop connection")
+        connection_established = True
+
+        # identificam modalitatea de comunicare
+        communicationMode = self.communication_mode.currentText()
+        comSelection = 0 if "TCP" in communicationMode else 1 if "UART" in communicationMode else None
+
+        # se va realiza un handshake pentru ca cele doua noduri sa convearga asupra aceleiasi modalitati de comunicare
+        # - bucla infinita pentru a repeta handshake-ul, ori de cate ori este nevoie, pana se efectueaza cu succes
+        while True:
+            # informam clientul cu privire la alegerea facuta si realizam handshake-ul
+            # salvam status-ul handshake-ului, conexiunea si tipul conexiunii
+            type, conn, HSstatus = CommunicationHandshake(self.SetConnectionStatus, connection, comSelection)
+            if not HSstatus:
+                # handshake esuat
+                self.SetConnectionStatus("* Handshake-ul a esuat!")
+                time.sleep(0.5)
+                self.SetConnectionStatus("* Se reia handshake-ul!")
+            else:
+				# handshake efectuat cu succes
+                if type == 0:
+					# initiem comunicarea prin TCP
+					# parasim bucla de reluare a handshake-ului, deoarece a fost efectuat cu succes
+                    self.SetConnectionStatus("Handshake realizat cu succes!\nComunicare : TCP Sockets")
+                    #TCPCommunication(conn)
+                    break
+                elif type == 1:
+					# initiem comunicarea prin UART
+					# parasim bucla de reluare a handshake-ului
+                    self.SetConnectionStatus("Handshake realizat cu succes!\nComunicare : UART")
+                    UARTCommunication(conn)
+                    break
+                else:
+					# tipul de comunicare identificat este eronat
+					# reluam handshake-ul
+                    self.SetConnectionStatus("* Canal de comunicare ales eronat!")
+
+        self.SetConnectionStatus("Ready to send data...\n")
+
+
+
 

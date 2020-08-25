@@ -1,5 +1,6 @@
 import sys
 from transmission_user_interface import *
+from communication.general_use import *
 
 class MainWindow(QMainWindow):
     def __init__(self):

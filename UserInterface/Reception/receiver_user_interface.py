@@ -18,8 +18,14 @@ os.system("pyside2-uic receiver.ui > receiver_gui.py")
 # - am facut conversia interfetei la cod sursa; urmeaza, asadar, sa incarcam acest cod in programul principal si sa il
 # utilizam
 from worker import *
+from communication.general_use import *
+from communication.handshake import *
+from communication.communication import *
+import socket
+import serial
 from api.zerotree import *
 from api.encoder import *
+import threading
 
 # definim un obiect global care va contine imaginea ce va fi incarcata din GUI
 # acest obiect va fi folosit in prelucrarile ulterioare din algoritm
@@ -31,13 +37,25 @@ wavelet_decomposition = []
 # definim un obiect care va contine o instanta a conexiunii dintre cele doua noduri
 connection = None
 
+# definim un obiect care va contine o instanta a socket-ului prin care se va realiza conexiunea
+sock = None
+
 # definim un obiect de tip Boolean folosit pentru validarea stabilirii conexiunii
 connection_established = False
+
+# definim credentialele de realizare a conexiunii
+config = {
+	#"host" : "192.168.43.43", # HOST-ul serverului
+		"host" : "192.168.43.226", # HOST-ul serverului
+	"port" : 7000		  # PORT-ul pe care este mapat serverul
+}
+
 
 class GraphicalUserInterface(Ui_MainWindow):
     def __init__(self, window):
         self.setupUi(window)
         window.setFixedSize(window.size())
+        self.consoleLock = threading.RLock()
         #self.ExtraObjectAttributes()
 
     # - functie care adauga anumite atribute elementelor interfetei
@@ -95,16 +113,16 @@ class GraphicalUserInterface(Ui_MainWindow):
     # setam interactiunile posibile ale interfetei grafice
     def SetActions(self):
         # atasam functia de callback pentru apasarea butonului de cautare a fisierului
-        self.search_image.clicked.connect(self.HandleSearchImageButton)
+        #self.search_image.clicked.connect(self.HandleSearchImageButton)
 
         # atasam functia de callback pentru DWT
-        self.wavelet_dec.clicked.connect(self.Wavelet_Decomposition)
+#        self.wavelet_dec.clicked.connect(self.Wavelet_Decomposition)
 
         # atasam functia de callback pentru modificarea tipului de operatie DWT efectuata
-        self.DWT_type.currentTextChanged.connect(self.SetWaveletTypes)
+ #       self.DWT_type.currentTextChanged.connect(self.SetWaveletTypes)
 
         # atasam functia de callback pentru codificarea cu ZeroTree si trimiterea catre celalalt nod
-        self.encode_and_send.clicked.connect(self.ZeroTreeEncodingAndSend)
+  #      self.encode_and_send.clicked.connect(self.ZeroTreeEncodingAndSend)
 
         # atasam functia de callback pentru cautarea si stabilirea de conexiuni
         self.check_connections.clicked.connect(self.CheckForConnections)
@@ -385,26 +403,95 @@ class GraphicalUserInterface(Ui_MainWindow):
             self.encoding_compression.setText(f"{round(matrix_size / len_items_to_send, 2)}")
     #        self.connection_status
 
-    def toExecute(self):
-        initialText = "Trying to connect"
-        currentText = None
-        for i in range(100):
-            if i % 4 == 0:
-                currentText = initialText
-            else:
-                currentText = currentText + "."
+    # functie pentru setarea label-ului ce descrie statusul conexiunii
+    def SetConnectionStatus(self, text):
+        self.consoleLock.acquire()
+        self.connection_status.append(text)
+        self.connection_status.repaint()
+        self.consoleLock.release()
+        time.sleep(0.025)
 
-            time.sleep(0.5)
-            print(currentText)
-            self.connection_status.setText(currentText)
-            self.connection_status.repaint()
 
     # functie care incearca conectarea cu celalalt nod
     # functia salveaza instanta conexiunii intr-un obiect global
     def CheckForConnections(self):
         global connection_established
-        connection_established = True
+        global sock
+        global connection
 
-#        self.toExecute()
+        # verificare coresp celei de-a doua stari a butonului, cea de oprire a conexiunii
+        if connection_established == True:
+            sock.close()
+            self.SetConnectionStatus("Conexiunea a fost inchisa cu succes...")
+            return
+
+        self.SetConnectionStatus("Se deschide socket-ul...")
+        time.sleep(0.5)
+        # AF-INET pentru familia de adrese IPv4
+        # SOCK_STREAM pentru comunicare prin TCP
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.SetConnectionStatus("Socket-ul a fost deschis cu succes...")
+        time.sleep(0.5)
+        self.SetConnectionStatus("Se realizeaza conectarea la server...")
+        time.sleep(0.5)
+        # se realizeaza conectarea la server
+        sock.connect((config["host"], config["port"]))
+        self.SetConnectionStatus("Conectare realizata cu succes...")
+
+        # modificam butonul de realizare a conexiunii si setam flagul coresp.
+        self.check_connections.setText("Stop connection")
+        connection_established = True
+        time.sleep(1)
+
+        self.SetConnectionStatus("Se asteapta date...")
+        communication_type = None
+
+        # bucla infinita de comunicare dintre server si client
+        while True:
+			# asteptam primirea unui mesaj pe socket
+            self.SetConnectionStatus("I'm fucking waiting for data...[Infinite Loop]\n")
+            decoded_data = socketREADMessage(sock)
+            self.SetConnectionStatus(f"* Am primit mesajul : {decoded_data}!")
+
+            if "[HS]" not in decoded_data:
+				# aceasta secventa se ocupa doar de realizeaza handshake-ului
+				# un mesaj care cu contine identificatorul de handshake este un mesaj eronat
+				# transmitem un mesaj de eroare!
+                errorMessage = "Waiting for handshake!"
+                socketWRITEMessage(sock, errorMessage)
+            else:
+				# se realizeaza Handshake-ul
+                type, connection, handshake_state = CommunicationHandshake(self.SetConnectionStatus, sock, decoded_data)
+                if not handshake_state :
+					# handshake esuat
+                    self.check_connections.setText("* Handshake-ul a esuat!")
+                    # informam serverul ca handshake-ul a esuat!
+                    errorMessage = "Handshake error!"
+                    socketWRITEMessage(sock, errorMessage)
+                    # - astfel, asteptam reincercarea executiei handshake-ului la urmatoarea parcurgere a buclei
+                else:
+                    # handshake efectuat cu succes
+                    if type == 0:
+                        # initiem comunicarea prin TCP
+                        self.SetConnectionStatus("Handshake realizat cu succes!\nComunicare : TCP Sockets")
+                        communication_type = 0
+                    elif type == 1:
+						# initiem comunicarea prin UART
+                        self.SetConnectionStatus("Handshake realizat cu succes!\nComunicare : UART")
+                        communication_type = 1
+                    else:
+						# am primit un tip eronat de comunicare
+                        print("* Canal de comunicare ales eronat!")
+						# asteptam reluarea handshake-ului si primirea unui tip valid
+                    break
+
+        if communication_type in [0, 1]:
+            # daca am ajuns aici, inseamna ca handshake-ul a fost efectua cu succes si putem incepe transmiterea
+            if communication_type == 0:
+                #TCPCommunication(connection)
+                print("TCP")
+            else:
+                #UARTCommunication(connection)
+                print("UART")
 
 
