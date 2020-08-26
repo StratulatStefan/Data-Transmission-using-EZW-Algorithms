@@ -25,6 +25,7 @@ from communication.general_use import *
 from communication.communication import *
 from api.wavelets import *
 import threading
+import pickle
 
 # definim un obiect global care va contine imaginea ce va fi incarcata din GUI
 # acest obiect va fi folosit in prelucrarile ulterioare din algoritm
@@ -323,6 +324,7 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # extragem numarul de iteratii si nr. nivelelor de descompunere
         loops = self.loops.value()
+        print(loops)
         decomposition_levels = int(self.decomposition_levels.text())
 
         # extragem coordonatele dimensionale ale imaginii
@@ -413,6 +415,10 @@ class GraphicalUserInterface(Ui_MainWindow):
             self.encoding_difference.setText(f"{BytestoKBytes(BitestoBytes(matrix_size - len_items_to_send))} Kb")
             self.encoding_compression.setText(f"{round(matrix_size / len_items_to_send, 2)}")
 
+        # semnalam finalizarea trimiterii tuturor datelor necesare
+        self.SetConnectionStatus("* Trimitem mesajul de finalizare completa...")
+        socketWRITEMessage(connection, "[finish]")
+
     def SendParameters(self):
         global connection
 
@@ -460,31 +466,30 @@ class GraphicalUserInterface(Ui_MainWindow):
         signif_map_conventions = str(SignificanceMapEncodingConventions())
         EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions")
 
-
     def SendCoefficients(self, significance_map, reconstruction_values):
         global connection
-        # convertim cele doua liste de valori intregi la liste de valori binare
-        significance_map_binary = str(significance_map).encode("utf-8")
-        reconstruction_values_binary = str(reconstruction_values).encode("utf-8")
+        # trimitem un mesaj de inceput pentru a delimita o noua iteratie
+        self.SetConnectionStatus("* Trimitem mesajul de pornire")
+        socketWRITEMessage(connection, "[start]")
+        time.sleep(1)
 
-        # trimitem significance map
         self.SetConnectionStatus("* Trimitem significance map")
-        print(significance_map)
-        print(significance_map_binary)
-        socketWRITE(connection, significance_map_binary)
-        time.sleep(1)
-        self.SetConnectionStatus("* Am trimis significance map")
+        sig_map_str = str(significance_map).replace("[","").replace("]","").replace(" ","")
+        socketWRITEMessage(connection, sig_map_str)
         time.sleep(1)
 
-        # trimitem valorile de reconstructie
-        self.SetConnectionStatus("* Trimitem valorile de reconstructie")
-        socketWRITE(connection, reconstruction_values_binary)
+        self.SetConnectionStatus("* Trimitem delimitatorul")
+        socketWRITEMessage(connection,"[delimitator]")
         time.sleep(1)
-        self.SetConnectionStatus("* Am trimis valorile de reconstructie")
+
+        self.SetConnectionStatus("* Trimitem reconstruction values")
+        rec_vals_str = str(reconstruction_values).replace("[","").replace("]","").replace(" ","")
+        socketWRITEMessage(connection, rec_vals_str)
+        time.sleep(1)
 
         # trimitem mesajul de finalizare
+        self.SetConnectionStatus("* Trimitem finalizatorul")
         socketWRITEMessage(connection, "[stop]")
-        x = 0
 
     # functie pentru setarea label-ului ce descrie statusul conexiunii
     def SetConnectionStatus(self, text):
@@ -556,13 +561,11 @@ class GraphicalUserInterface(Ui_MainWindow):
 					# initiem comunicarea prin TCP
 					# parasim bucla de reluare a handshake-ului, deoarece a fost efectuat cu succes
                     self.SetConnectionStatus("Handshake realizat cu succes!\nComunicare : TCP Sockets")
-                    #TCPCommunication(conn)
                     break
                 elif type == 1:
 					# initiem comunicarea prin UART
 					# parasim bucla de reluare a handshake-ului
                     self.SetConnectionStatus("Handshake realizat cu succes!\nComunicare : UART")
-                    UARTCommunication(conn)
                     break
                 else:
 					# tipul de comunicare identificat este eronat

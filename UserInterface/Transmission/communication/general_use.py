@@ -1,3 +1,4 @@
+import time
 # functie lambda care codifica un mesaj din format string in format binar
 data_encode = lambda message : message.encode("utf-8")
 
@@ -9,6 +10,7 @@ data_decode = lambda message : message.decode("utf-8")
 def socketWRITE(sock, message):
         # trimitem octetii
 	sock.sendall(message)
+	time.sleep(0.1)
 
 # functie folosita pentru transmiterea unui mesaj prin socket TCP
 def socketWRITEMessage(sock, message):

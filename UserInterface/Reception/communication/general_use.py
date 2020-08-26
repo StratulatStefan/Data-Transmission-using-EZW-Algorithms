@@ -1,7 +1,5 @@
 import re
 
-significance_map = []
-reconstruction_values = None
 
 # functie lambda care codifica un mesaj din format string in format binar
 data_encode = lambda message : message.encode("utf-8")
@@ -48,11 +46,7 @@ def uartWRITEMessage(port, message):
 # functie pentru citirea octetilor din socket-ul TCP
 def socketREAD(sock):
         # citim si returnam 1024 de octeti din socket
-	try:
 		return sock.recv(1024)
-	except Exception:
-		print(len(significance_map))
-		print(significance_map)
 
 # functie pentru citirea unui mesaj de pe socket-ul TCP
 def socketREADMessage(sock):

@@ -11,7 +11,7 @@ def SendEncodings(decomposition_level, size, conventions, significance_map_encod
     encoding_strings = list(conventions.keys())[1:]
 
     # recompunem significance_map
-    significance_map = list(map(lambda item : encoding_strings[encoding_bits.index(item)],significance_map_encoding))
+    significance_map = list(map(lambda item : encoding_strings[encoding_bits.index(str(item))],significance_map_encoding))
 
     # cream o lista de coeficienti de aceeasi dimensiune cu lista de coeficienti ce a fost encodata
     # aceasta lista va contine initial doar valori infinite astfel incat sa stim unde vom adauga elementele corespunzatoare

@@ -23,6 +23,7 @@ from communication.handshake import *
 from communication.communication import *
 import socket
 import serial
+from api.plotter import *
 from api.zerotree import *
 from api.encoder import *
 import threading
@@ -435,7 +436,6 @@ class GraphicalUserInterface(Ui_MainWindow):
         # AF-INET pentru familia de adrese IPv4
         # SOCK_STREAM pentru comunicare prin TCP
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
         self.SetConnectionStatus("Socket-ul a fost deschis cu succes...")
         time.sleep(0.5)
         self.SetConnectionStatus("Se realizeaza conectarea la server...")
@@ -500,4 +500,62 @@ class GraphicalUserInterface(Ui_MainWindow):
             else:
                 #UARTCommunication(self, self.SetConnectionStatus, connection)
                 pass
+
+    # functie care va prelua datele receptionate si va recompune imaginea
+    def DWTRecomposer(self, significance_map, reconstruction_values):
+        # extragem nr. nivelelor de descompunere
+        decomposition_levels = int(self.image_decomposition_levels.toPlainText())
+
+        # exragem coordonatele dimensionale are transformatei
+        coordinates = self.image_dimensions.toPlainText().lower().replace(" ","")
+        rows, cols = list(map(lambda value : int(int(value) / 1), coordinates.split("x")))
+
+        # extragem conventiile de codificare a significance map
+        significance_map_conventions = StringToDictionary(self.significance_map_conventions.toPlainText())
+
+        DWT = SendEncodings(decomposition_levels, (rows, cols), significance_map_conventions,
+                            significance_map, reconstruction_values)
+
+        pixmapDWT = UI_Worker.ConvertNumpyImagetoPixmap(DWT)
+        width = self.wavelet_label.width()
+        height = self.wavelet_label.height()
+        self.wavelet_label.setPixmap(pixmapDWT.scaled(width,height, Qt.KeepAspectRatio))
+        self.wavelet_label.repaint()
+
+        # avand vectorul cu coeficientii DWT, putem recompune imaginea originala
+        self.ImageReconstruction(DWT)
+
+    # functie care reconstruieste imaginea originala pe baza coeficientilor receptionati
+    def ImageReconstruction(self, DWT):
+        # determinam tipul de algoritm folosit
+        decomposition_algorithm = self.wavelet_algorithm.toPlainText().lower()
+
+        # determinam tipul de wavelet folosit
+        wavelet_type = self.wavelet_type.toPlainText().lower()
+
+        if decomposition_algorithm == "pywavelets":
+            # decompunem imaginea in cele 4 subbenzi
+            # repara aici!
+            rows, cols = list(map(lambda value : int(value/2), DWT.shape))
+            coeffs = (DWT[:rows, :cols],
+                      (DWT[:rows, cols:],
+                      DWT[rows:, :cols],
+                      DWT[rows:, cols:]))
+            wavelet_type = defined_filters[wavelet_type]
+            image = pywt.idwt2(coeffs, wavelet_type)
+            image = UI_Worker.ConvertNumpyImagetoPixmap(image)
+            width, height = self.image_label.width(), self.image_label.height()
+            self.image_label.setPixmap(image.scaled(width, height, Qt.KeepAspectRatio))
+            self.image_label.repaint()
+        elif decomposition_algorithm == "convolution - singlethread":
+            pass
+        elif decomposition_algorithm == "convolution - multithread":
+            pass
+        elif decomposition_algorithm == "linear-based - singlethread":
+            pass
+        elif decomposition_algorithm == "linear-baseds - singlethread":
+            pass
+
+
+
 
