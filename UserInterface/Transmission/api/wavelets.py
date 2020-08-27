@@ -123,25 +123,20 @@ def WaveletMultipleDecomposition(image, wavelet_type, level, function):
 
     DWT = []
     LL = np.copy(image)
-    initial_level = np.copy(level)
+    rows, cols = image.shape
+    final_result = None
     while level > 0:
         decomposition = WaveletDecomposition(LL, wavelet_type, function)
-        DWT.insert(0, decomposition)
-        LL = DWT[0]
+        try:
+            final_result[:rows, :cols] = decomposition
+        except Exception:
+            final_result = np.copy(decomposition)
+        rows = int(rows/2)
+        cols = int(cols/2)
+        LL = decomposition[:rows, :cols]
         level -= 1
 
-    '''
-    final_result = np.copy(image)
-    rows, cols = image.shape
-    while initial_level > 0:
-        rows, cols = list(map(lambda value : int(value / 2), [rows, cols]))
-        current_subband = DWT[-1]
-                
-        DWT = DWT[:-1]
-
-        initial_level -= 1
-    '''
-    return DWT
+    return final_result
 
 # functie care realizeaza compunerea canalelor individuale RGB pentru obtinerea unei singure reprezentari RGB
 def RGBDWTRecompose(red_channel, green_channel, blue_channel):

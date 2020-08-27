@@ -9,13 +9,16 @@
 import os
 import socket
 import serial
+import multiprocessing
 import time
 import re
 
-os.system("pyside2-uic transmission.ui > transmission_gui.py")
+#os.system("pyside2-uic transmission.ui > transmission_gui.py")
 
 # - am facut conversia interfetei la cod sursa; urmeaza, asadar, sa incarcam acest cod in programul principal si sa il
 # utilizam
+from PySide2.QtCore import QProcess, QThread
+
 from transmission_gui import *
 from worker import *
 from api.zerotree import *
@@ -46,7 +49,7 @@ connection_established = False
 # definim un dictionar care va contine credentialele de comunicare
 config = {
 	#"host" : "192.168.43.43", # HOST-ul serverului
-	"host" : "192.168.43.226",
+	"host" : "192.168.100.170",
 	"port" : 7000 		  # PORT-ul pe care serverul asculta
 }
 
@@ -163,7 +166,7 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         start = time.time_ns()
         # repara aici sa mearga descompunere multipla!!!
-        wavelet_decomposition = WaveletMultipleDecomposition(global_image, wavelet_type, decomposition_levels, function)[0]
+        wavelet_decomposition = WaveletMultipleDecomposition(global_image, wavelet_type, decomposition_levels, function)
         stop = time.time_ns()
 
         rw, cl = list(map(lambda value : int(value/2), wavelet_decomposition.shape))
@@ -573,7 +576,4 @@ class GraphicalUserInterface(Ui_MainWindow):
                     self.SetConnectionStatus("* Canal de comunicare ales eronat!")
 
         self.SetConnectionStatus("Ready to send data...\n")
-
-
-
 

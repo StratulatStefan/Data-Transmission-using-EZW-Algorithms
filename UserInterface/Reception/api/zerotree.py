@@ -32,20 +32,6 @@ class DominantListItem:
                f"Reconstruction [{self.reconstruction}] === " \
                f"Encoding [{self.encoding}]"
 
-# Threshold-ul initial se alege astfel incat sa fie mai mare decat jumatatea maximului valorilor absolute ale coeficientilor
-# T0 > |Xj| / 2 (unde Xj, reprezinta oricare dintre coeficienti)
-# Se asemenea, conform SAQ, se prefera ca T0 sa fie putere a lui 2
-# Asadar, determinam primul numar putere a lui 2, mai mare decat jumatatea valorii maxime dintre valorile absolute ale coeficientilor
-def GetInitialThreshold(image):
-    # jumatatea valorii maxime dintre valorile absolute ale coeficientilor
-    max_abs_coef = np.max(abs(image)) / 2
-
-    # determinam threshold-ul ca fiind cea mai apropiata valoare mai mare decat max_abs_coef, si putere a lui 2
-    power = np.ceil(np.log2(max_abs_coef))
-    threshold = int(np.power(2, power))
-
-    return threshold
-
 # functie care analizeaza dimensiunile matricii de coeficienti si returneaza limitele nivelelor de descompunere
 def GetDecompositionLimits(dimensions, decomposition_levels):
     rows, cols = dimensions

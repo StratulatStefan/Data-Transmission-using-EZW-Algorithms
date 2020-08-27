@@ -45,7 +45,10 @@ def QMF_5_tap_symmetric():
     h1 =  0.25000
     h2 = -0.05381
 
-    return CreateQMFPyramidFilter(h0, h1, h2)
+    arr = CreateQMFPyramidFilter(h0, h1, h2)
+    arr[0].reverse()
+    arr[1].reverse()
+    return arr
 
 def Daubechies_4():
     h0 = (1 + np.sqrt(3)) / (4 * np.sqrt(2))
