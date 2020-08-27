@@ -4,7 +4,7 @@
 "pyside2-uic", care va primi ca input fisierul cu interfata de tip ".uic" si va avea ca output codul sursa de tip ".py"
 *   Aceasta trebuie realizata inainte de a incarca codul sursa al interfetei in program si a-l utiliza.
 '''
-
+import pickle
 import os
 
 # inainte de a incarca codul sursa al interfetei, vom face conversia de la .ui la .py folosind pyside2-uic
@@ -43,7 +43,6 @@ connection_established = False
 
 # definim un dictionar care va contine credentialele de comunicare
 config = {
-	#"host" : "192.168.43.43", # HOST-ul serverului
 	"host" : "192.168.100.170",
 	"port" : 7000 		  # PORT-ul pe care serverul asculta
 }
@@ -497,12 +496,12 @@ class GraphicalUserInterface(Ui_MainWindow):
         self.consoleLock.acquire()
 
         # adaugam textul si redesenam label-ul
-        self.connection_status.append(text)
+        self.connection_status.setText(text)
         self.connection_status.repaint()
 
         # eliberam Lock-ul
         self.consoleLock.release()
-        time.sleep(0.05)
+        time.sleep(0.1)
 
     # functie care incearca conectarea cu celalalt nod
     # functia salveaza instanta conexiunii intr-un obiect global
@@ -542,7 +541,6 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # clientul este conectat si putem incepe comunicarea
         self.SetConnectionStatus(f"S-a conectat un client : \n{address}")
-        time.sleep(0.5)
 
         # modificam butonul de realizare a conexiunii si setam flagul coresp.
         self.check_connections.setText("Stop connection")
@@ -581,4 +579,5 @@ class GraphicalUserInterface(Ui_MainWindow):
                     self.SetConnectionStatus("* Canal de comunicare ales eronat!")
 
         self.SetConnectionStatus("Ready to send data...\n")
+
 
