@@ -1,5 +1,4 @@
-from api.zerotree import *
-
+from api.general_use import *
 
 # - functie prin care trimitem significance_map si valorile de recontructie catre decoder
 # - ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti pe baza careia se va realiza

@@ -1,4 +1,5 @@
 import time
+
 # functie lambda care codifica un mesaj din format string in format binar
 data_encode = lambda message : message.encode("utf-8")
 
@@ -14,48 +15,48 @@ def socketWRITE(sock, message):
 
 # functie folosita pentru transmiterea unui mesaj prin socket TCP
 def socketWRITEMessage(sock, message):
-        # encodam messajul
+	# encodam messajul
 	encoded_msg = data_encode(message)
 	# trimitem mesajul
 	socketWRITE(sock, encoded_msg)
 
 # functie folosita pentru transmiterea octetilor prin UART
 def uartWRITE(port, message):
-        # trimitem mesajul encodat
+	# trimitem mesajul encodat
 	port.write(message)
 
 # functie folosita pentru transmiterea unui mesaj prin UART
 def uartWRITEMessage(port, message):
-        # encodam mesajul
+	# encodam mesajul
 	encoded_msg = data_encode(message)
-        # trimitem mesajul encodat
+	# trimitem mesajul encodat
 	uartWRITE(port, encoded_msg)
 
 # functie pentru citirea octetilor din socket-ul TCP
 def socketREAD(sock):
-        # citim si returnam 1024 de octeti din socket
+	# citim si returnam 1024 de octeti din socket
 	return sock.recv(1024)
 
 # functie pentru citirea unui mesaj de pe socket-ul TCP
 def socketREADMessage(sock):
-        # citim octetii din socket
+	# citim octetii din socket
 	message = socketREAD(sock)
-        # decodam si returnam octetii
+	# decodam si returnam octetii
 	return data_decode(message)
 
 # functie pentru citirea octetilor din UART
 def uartREAD(port):
-        # citim 1 octet de pe portul serial
+	# citim 1 octet de pe portul serial
 	data = port.read()
-        # determinam numarul de octeti ramasi in bufferul de intrare
+	# determinam numarul de octeti ramasi in bufferul de intrare
 	remaining_bytes = port.inWaiting()
-        # citim octetii ramasi
+	# citim octetii ramasi
 	data += port.read(remaining_bytes)
 	return data
 
 # functie pentru citirea unui mesaj din UART
 def uartREADMessage(port):
-        # citim octetii din UART
+	# citim octetii din UART
 	data = uartREAD(port)
-        # decodam si returnam mesajul
+	# decodam si returnam mesajul
 	return data_decode(data)

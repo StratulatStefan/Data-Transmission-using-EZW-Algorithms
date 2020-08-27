@@ -6,6 +6,7 @@ import multiprocessing
 from functools import partial
 from api.image_general_use import *
 
+'''
 # functie care realizeaza descompunerea cu wavelets, folosind functia din libraria PyWavelets
 def LibraryDWTCompute(image, wavelet_type):
     return pywt.dwt2(image, wavelet_type)
@@ -130,18 +131,8 @@ def WaveletMultipleDecomposition(image, wavelet_type, level, function):
         LL = DWT[0]
         level -= 1
 
-    '''
-    final_result = np.copy(image)
-    rows, cols = image.shape
-    while initial_level > 0:
-        rows, cols = list(map(lambda value : int(value / 2), [rows, cols]))
-        current_subband = DWT[-1]
-                
-        DWT = DWT[:-1]
-
-        initial_level -= 1
-    '''
     return DWT
+'''
 
 # functie care realizeaza compunerea canalelor individuale RGB pentru obtinerea unei singure reprezentari RGB
 def RGBDWTRecompose(red_channel, green_channel, blue_channel):

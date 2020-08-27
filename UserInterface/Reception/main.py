@@ -9,8 +9,10 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
     # atasam functia de inchidere sigura a conexiunii (socket-ului)
     app.aboutToQuit.connect(SafeClose)
+
     window = MainWindow()
     window.show()
 

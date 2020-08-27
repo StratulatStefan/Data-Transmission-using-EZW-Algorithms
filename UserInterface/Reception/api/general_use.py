@@ -145,6 +145,30 @@ def ArrayToSquareMatrix(items):
 
 ##########################################################################################
 
+# functie care identifica descendentii de la urm. nivel, ai unui element
+# se are in vedere ca avem corespondenta 1 : 4 (coarser : finner level)
+def GetNextSubbands(decomposition_levels, current_level,upper_limits,index):
+    band_size = int(upper_limits[decomposition_levels - current_level + 1] / 4)
+    subband_size = int(band_size / 4)
+    current_subband = int(index / subband_size)
+    index_in_subband = index % subband_size
+    step = int(np.sqrt(band_size)) - 2
+    elements_on_the_line = int(np.sqrt(subband_size))
+    current_line_in_band = int(index_in_subband / elements_on_the_line) * int(np.sqrt(band_size))
+    current_line_in_subband = int(index_in_subband / elements_on_the_line) * int(np.sqrt(subband_size))
+    index_in_current_line = index_in_subband % current_line_in_subband if current_line_in_subband > 0 else index_in_subband
+
+    inferior_limit_0 = current_subband * band_size + 2 * (current_line_in_band + index_in_current_line)
+    superior_limit_0 = inferior_limit_0 + 2
+    inferior_limit_1 = superior_limit_0 + step
+    superior_limit_1 = inferior_limit_1 + 2
+
+    subbands = ListFlatter([range(inferior_limit_0, superior_limit_0), range(inferior_limit_1, superior_limit_1)])
+
+    return subbands
+
+##########################################################################################
+
 # functie care returneaza indicii de decompozitie a unei matrici de coeficienti in functie de dimensiunea imaginii si de nr. de nivele de descompunere
 # se va returna o lista de liste; fiecare element (sublista din lista) va avea forma [limita_superioara_subbanda, nr._elemente_subbanda]
 def GetDecompositionIndices(size, decomposition_levels):

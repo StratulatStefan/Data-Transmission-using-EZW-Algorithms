@@ -1,6 +1,5 @@
 
-from transmission_gui import *
-from PySide2.QtGui import QImage
+from PySide2.QtGui import QImage, QPixmap
 import numpy as np
 import cv2 as cv
 

@@ -59,7 +59,7 @@ def GetDecompositionLimits(dimensions, decomposition_levels):
     return decomposition_limits
 
 # functie care descompune o imagine in subbenzile coresp. fiecarui nivel (imaginea reprezinta descompunerea pe nivele de wavelets coeficients)
-    '''
+'''
     #########
     # Input #
     #########
@@ -86,9 +86,7 @@ def GetDecompositionLimits(dimensions, decomposition_levels):
     # Output #
     ##########
     - fiecare subbanda de pe fiecare nivel in parte
-  
     '''
-
 # functie care realizeaza descompunerea matricii de coeficienti in toate subbenzile componente de la fiecare nivel de descompunere
 def SubbandsDecompose(image, decomposition_levels):
     # extragem coordonatele dimensionale ale imaginii

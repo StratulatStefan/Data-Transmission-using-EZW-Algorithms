@@ -5,30 +5,25 @@
 *   Aceasta trebuie realizata inainte de a incarca codul sursa al interfetei in program si a-l utiliza.
 '''
 
-# inainte de a incarca codul sursa generat de QT, vom face conversia de la .ui la .py folosind pyside2-uic
 import os
-import socket
-import serial
-import multiprocessing
-import time
-import re
 
+# inainte de a incarca codul sursa al interfetei, vom face conversia de la .ui la .py folosind pyside2-uic
 #os.system("pyside2-uic transmission.ui > transmission_gui.py")
 
-# - am facut conversia interfetei la cod sursa; urmeaza, asadar, sa incarcam acest cod in programul principal si sa il
-# utilizam
-from PySide2.QtCore import QProcess, QThread
+# - am facut conversia interfetei la cod sursa; urmeaza, asadar, sa incarcam acest cod in programul principal si il utilizam
+import socket
+import sys
+import serial
+import time
 
+from PySide2.QtCore import QUrl
 from transmission_gui import *
 from worker import *
 from api.zerotree import *
 from api.encoder import *
 from communication.handshake import *
-from communication.general_use import *
-from communication.communication import *
 from api.wavelets import *
-import threading
-import pickle
+from threading import RLock
 
 # definim un obiect global care va contine imaginea ce va fi incarcata din GUI
 # acest obiect va fi folosit in prelucrarile ulterioare din algoritm
@@ -53,18 +48,20 @@ config = {
 	"port" : 7000 		  # PORT-ul pe care serverul asculta
 }
 
+# aceasta functie va fi apelata la inchiderea ferestrei si se va ocupa de inchiderea conexiunii cu celalalt nod
 def SafeClose():
     if connection_established == True:
         print("Safe Close! Good Bye!")
         connection.close() if connection != None else None
         sock.close() if sock != None else None
 
+
 class GraphicalUserInterface(Ui_MainWindow):
     def __init__(self, window):
         self.setupUi(window)
         window.setFixedSize(window.size())
         self.ExtraObjectAttributes()
-        self.consoleLock = threading.RLock()
+        self.consoleLock = RLock()
 
     # - functie care adauga anumite atribute elementelor interfetei
     # - adaugarea acestor atribute se efectueaza aici intrucat, la fiecare modificare a interfetei grafice, codul sursa al
@@ -104,7 +101,10 @@ class GraphicalUserInterface(Ui_MainWindow):
             url = QUrl.toString(fileDialog.selectedUrls()[0])
 
         # prelucram url-ul astfel incat sa pastram doar sursa, eliminand protocolul (file:///)
-        url = url.replace("file:///", "")
+        try:
+            url = url.replace("file:///", "")
+        except Exception:
+            return
 
         # odata ce am extras url-ul, il setam in elementul image_source
         self.image_source.setText(url)
@@ -135,60 +135,6 @@ class GraphicalUserInterface(Ui_MainWindow):
         # atasam functia de callback pentru cautarea si stabilirea de conexiuni
         self.check_connections.clicked.connect(self.CheckForConnections)
 
-    # functie pentru tratarea DWT
-    def Wavelet_Decomposition(self):
-        global global_image
-        global wavelet_decomposition
-        # descompunerea se poate face doar daca imaginea este incarcata corect (obiectul np.array)
-        if global_image == []:
-            exception = Exception("Could not execute Wavelet Decomposition before Loading the image!")
-            self.HandleBasicException(exception)
-            return
-
-        # functie care va afisa o imagine in fereastra coresp pana cand descompunerea se realizeaza
-        self.VirtualProxy()
-        # imaginea a fost incarcata corect si urmeaza sa extragem parametrii necesari executarii descompunerii
-        decomposition_levels = int(self.decomposition_levels.text())
-        DWT_type = str(self.DWT_type.currentText().lower())
-        wavelet_type = defined_filters[self.wavelet_type.currentText().lower()]
-
-        function = None
-        if DWT_type == "pywavelets":
-            function = LibraryDWTCompute
-        elif DWT_type == "convolution - singlethread":
-            function = SingleThread_ScratchDWTComputeRCWT
-        elif DWT_type == "convolution - multithread":
-            function = MultiThread_ScratchDWTComputeRCWT
-        elif DWT_type == "linear-based - singlethread":
-            function = SingleThread_ScratchDWTComputeLBWT
-        elif DWT_type == "linear-based - multithread":
-            function = MultiThread_ScratchDWTComputeLBWT
-
-        start = time.time_ns()
-        # repara aici sa mearga descompunere multipla!!!
-        wavelet_decomposition = WaveletMultipleDecomposition(global_image, wavelet_type, decomposition_levels, function)
-        stop = time.time_ns()
-
-        rw, cl = list(map(lambda value : int(value/2), wavelet_decomposition.shape))
-
-        # obtinem imaginea de tip QPixmap necesara afisarii in interfata
-        pixmapDWT = UI_Worker.ConvertNumpyImagetoPixmap(wavelet_decomposition)
-
-        width = self.wavelet_label.width()
-        height = self.wavelet_label.height()
-        self.wavelet_label.setPixmap(pixmapDWT.scaled(width, height, Qt.KeepAspectRatio))
-
-        # odata ce am obtinut descompunerea, putem afisa parametrii corespunzatori
-        self.wavelet_parameters.setVisible(True)
-
-        qt_image_parameters = self.ExtractImageParameters(pixmapDWT)
-        qt_image_parameters["width"] = int(qt_image_parameters["width"] / 2)
-        qt_image_parameters["height"] = int(qt_image_parameters["height"] / 2)
-        # adaugam ca parametru si timpul de descompunere
-        qt_image_parameters["time"] = (stop - start) / 1e9
-        self.SetImageParameters([self.wavelet_width, self.wavelet_height, self.wavelet_size, self.wavelet_time],
-                                qt_image_parameters)
-
     # functie pentru incarcarea si afisarea imaginii
     def ImageLoadAndDisplay(self, path, image_label):
         # incarcam imaginea pentru afisare
@@ -196,22 +142,17 @@ class GraphicalUserInterface(Ui_MainWindow):
         # (pentru prelucrarea imaginii, se va incarca folosind libraria OpenCV)
         qt_image = QPixmap(path)
 
-        # verificam optiunea utilizatorului cu privire la spatiul de culoare al imaginii
-        color_space_option = str(self.color_space.currentText())
-        img = qt_image
-        if color_space_option.lower() == "grayscale":
-            # convertim imaginea la grayscale
-            qt_image_grayscale = UI_Worker.GrayScalePixMap(qt_image)
-            img = qt_image_grayscale
+        # convertim imaginea la grayscale
+        qt_image = UI_Worker.GrayScalePixMap(qt_image)
 
         # extragem o serie din parametrii imaginii
-        qt_image_parameters = self.ExtractImageParameters(img)
+        qt_image_parameters = self.ExtractImageParameters(qt_image)
 
         # obtinem dimensiunile label-ului
         width, height = self.image_label.width(), self.image_label.height()
 
         # afisam imaginea in elementul image_box si redimensionam label-ul astfel incat imaginea sa poata fi afisata complet
-        image_label.setPixmap(img.scaled(width, height, Qt.KeepAspectRatio))
+        image_label.setPixmap(qt_image.scaled(width, height, Qt.KeepAspectRatio))
 
         # setam parametrii imaginii in box-ul coresp.
         self.SetImageParameters([self.image_width, self.image_height, self.image_size, self.image_bpp], qt_image_parameters)
@@ -220,16 +161,11 @@ class GraphicalUserInterface(Ui_MainWindow):
     def LoadNumpyImage(self, url):
         global global_image
         try:
-            # verificam optiunea utilizatorului cu privire la spatiul de culoare al imaginii
-            color_space_option = str(self.color_space.currentText())
-            if color_space_option.lower() == "rgb":
-                global_image = ImageRead(url, cv.IMREAD_COLOR)
-            else:
-                global_image = ImageRead(url, cv.IMREAD_GRAYSCALE)
+            global_image = ImageRead(url, cv.IMREAD_GRAYSCALE)
         except Exception as exc:
             self.HandleBasicException(exc)
 
-    # functie pentru tratarea unei exceptii prin afisarea un messagebox cu textul exceptiei
+    # functie pentru tratarea unei exceptii, prin afisarea un messagebox cu textul exceptiei
     def HandleBasicException(self, exc):
         # definim un messageBox si setam textul exceptiei
         messageBox = QMessageBox()
@@ -251,6 +187,7 @@ class GraphicalUserInterface(Ui_MainWindow):
         parameters = {"width" : 0, "height" : 0, "size" : 0}
         parameters["width"] = image_map.width()
         parameters["height"] = image_map.height()
+
         # determinam nr. de biti necesari stocarii imaginii
         # imaginea este in grayscale, deci pentru fiecare pixel avem nevoie de 8 biti
         # reprezentarea se face in KBytes, deci impartim la 8 pentru a obtine Bytes si la 1024 pentru a obtine KBytes
@@ -286,8 +223,8 @@ class GraphicalUserInterface(Ui_MainWindow):
         for w_type in wavelet_types:
             self.wavelet_type.addItem(w_type)
 
-    # functie care se executa atunci cand o resursa nu este pregatita si nu vrem ca interfata sa se blocheze
-    # folosita in cazul descompunerii
+    # - functie care se executa atunci cand o resursa nu este pregatita si nu vrem ca interfata sa se blocheze
+    # - folosita in cazul descompunerii
     def VirtualProxy(self):
         # incarcam o imagina de asteptare si o afisam in fereastra wavelet_label
         qt_image = QPixmap("D:/Confidential/EZW Algorithm/loading.jpg")
@@ -303,10 +240,66 @@ class GraphicalUserInterface(Ui_MainWindow):
         # - dupa ce descompunerea se va realiza cu succes, se vor apela functii in firul principal care vor
         # inlocui aceasta imagine si vor face campul de parametri vizibil
 
+    # functie pentru tratarea DWT
+    def Wavelet_Decomposition(self):
+        global global_image
+        global wavelet_decomposition
+        # descompunerea se poate face doar daca imaginea este incarcata corect (obiectul np.array)
+        if global_image == []:
+            exception = Exception("Could not execute Wavelet Decomposition before Loading the image!")
+            self.HandleBasicException(exception)
+            return
+
+        # functie care va afisa o imagine in fereastra coresp pana cand descompunerea se realizeaza
+        self.VirtualProxy()
+
+        # imaginea a fost incarcata corect si urmeaza sa extragem parametrii necesari executarii descompunerii
+        decomposition_levels = int(self.decomposition_levels.text())
+        DWT_type = str(self.DWT_type.currentText().lower())
+        wavelet_type = defined_filters[self.wavelet_type.currentText().lower()]
+
+        # determinam functia ce va fi folosita la descompunere, pe baza selectiei de pe interfata
+        function = None
+        if DWT_type == "pywavelets":
+            function = LibraryDWTCompute
+        elif DWT_type == "convolution - singlethread":
+            function = SingleThread_ScratchDWTComputeRCWT
+        elif DWT_type == "convolution - multithread":
+            function = MultiThread_ScratchDWTComputeRCWT
+        elif DWT_type == "linear-based - singlethread":
+            function = SingleThread_ScratchDWTComputeLBWT
+        elif DWT_type == "linear-based - multithread":
+            function = MultiThread_ScratchDWTComputeLBWT
+
+        # realizam descompunerea si masuram timpul de executie
+        start = time.time_ns()
+        wavelet_decomposition = WaveletMultipleDecomposition(global_image, wavelet_type, decomposition_levels, function)
+        stop = time.time_ns()
+
+        # obtinem imaginea de tip QPixmap necesara afisarii in interfata
+        pixmapDWT = UI_Worker.ConvertNumpyImagetoPixmap(wavelet_decomposition)
+
+        # setam imaginea pe interfata grafica
+        width = self.wavelet_label.width()
+        height = self.wavelet_label.height()
+        self.wavelet_label.setPixmap(pixmapDWT.scaled(width, height, Qt.KeepAspectRatio))
+
+        # odata ce am obtinut descompunerea, putem afisa parametrii corespunzatori
+        self.wavelet_parameters.setVisible(True)
+
+        # extragem parametrii imaginii rezultate si ii afisam pe interfata, adaugand, ca parametru, si timpul de executie
+        qt_image_parameters = self.ExtractImageParameters(pixmapDWT)
+        qt_image_parameters["width"] = int(qt_image_parameters["width"] / 2)
+        qt_image_parameters["height"] = int(qt_image_parameters["height"] / 2)
+        qt_image_parameters["time"] = (stop - start) / 1e9
+        self.SetImageParameters([self.wavelet_width, self.wavelet_height, self.wavelet_size, self.wavelet_time],
+                                qt_image_parameters)
+
     # functia de codificare cu ZeroTree si trimitere catre celalalt nod
     def ZeroTreeEncodingAndSend(self):
         global wavelet_decomposition
         global connection_established
+
         # in primul rand, aceasta functie nu poate fi apelata daca nu s-a generat lista de coeficienti (nu s-a efectuat DWT)
         # de asemenea, trebuie sa avem conexiunea stabilita pentru a putea trimite datele
         if wavelet_decomposition == []:
@@ -327,7 +320,6 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # extragem numarul de iteratii si nr. nivelelor de descompunere
         loops = self.loops.value()
-        print(loops)
         decomposition_levels = int(self.decomposition_levels.text())
 
         # extragem coordonatele dimensionale ale imaginii
@@ -340,9 +332,10 @@ class GraphicalUserInterface(Ui_MainWindow):
         # obtinem threshold-ul initial
         threshold = GetInitialThreshold(wavelet_decomposition)
 
+        # determinam numarul de biti necesari encodarii fiecarei valori din lista de coeficienti
+        # se are in vedere nr. de biti necesari pentru cea mai mare valoare
         nof_bites_needed = int(np.ceil(np.log2(np.max(wavelet_decomposition))))
         matrix_size = rows * cols * nof_bites_needed
-        print(f"Matricea de coeficienti contine {BytestoKBytes(BitestoBytes(matrix_size))} Kb")
 
         # curatam elemente de pe interfata ce vor afisa parametrii
         self.encoding_significance_map.clear()
@@ -404,13 +397,14 @@ class GraphicalUserInterface(Ui_MainWindow):
             stop = time.time_ns()
             self.encoding_time.setText(f"{(stop - start) / 1e9} s")
 
+            # trimitem significance map si reconstruction values catre celalalt nod
             self.SendCoefficients(significance_map_encoding, reconstruction_values)
 
-            signif_map_bites_needed = 3
+            # valorea maxima din significance_map este 3, care poate fi reprezentat pe 2 biti
+            signif_map_bites_needed = 2
             reconstruction_values_bites_needed = int(np.ceil(np.log2(np.max(reconstruction_values))))
             len_items_to_send = len(significance_map_encoding) * signif_map_bites_needed + \
                                 len(reconstruction_values) * reconstruction_values_bites_needed
-            print("#######################################################")
 
             self.encoding_significance_map.setText(f"{BytestoKBytes(BitestoBytes(len(significance_map_encoding) * signif_map_bites_needed))} Kb")
             self.encoding_reconstruction_values.setText(f"{BytestoKBytes(BitestoBytes(len(reconstruction_values) * reconstruction_values_bites_needed))} Kb")
@@ -422,6 +416,7 @@ class GraphicalUserInterface(Ui_MainWindow):
         self.SetConnectionStatus("* Trimitem mesajul de finalizare completa...")
         socketWRITEMessage(connection, "[finish]")
 
+    # functie pentru trimiterea unor parametrii catre celalalt nod (numele imaginii, etc)
     def SendParameters(self):
         global connection
 
@@ -432,7 +427,7 @@ class GraphicalUserInterface(Ui_MainWindow):
             socketWRITE(connection, data_to_send)
             time.sleep(0.25)
             printer(f"{type} a fost trimis cu succes!")
-            time.sleep(0.25)
+            time.sleep(0.5)
 
         # trimitem numele imaginii
         filepath = self.image_source.toPlainText()
@@ -469,8 +464,10 @@ class GraphicalUserInterface(Ui_MainWindow):
         signif_map_conventions = str(SignificanceMapEncodingConventions())
         EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions")
 
+    # functie pentru trimitea unor liste catre celalalt nod (significance map & reconstruction values)
     def SendCoefficients(self, significance_map, reconstruction_values):
         global connection
+
         # trimitem un mesaj de inceput pentru a delimita o noua iteratie
         self.SetConnectionStatus("* Trimitem mesajul de pornire")
         socketWRITEMessage(connection, "[start]")
@@ -496,11 +493,16 @@ class GraphicalUserInterface(Ui_MainWindow):
 
     # functie pentru setarea label-ului ce descrie statusul conexiunii
     def SetConnectionStatus(self, text):
+        # folosim un Lock, pentru sincronizare, in cazul folosirii mai multor threaduri care vor sa acceseze simultan resursa
         self.consoleLock.acquire()
+
+        # adaugam textul si redesenam label-ul
         self.connection_status.append(text)
         self.connection_status.repaint()
+
+        # eliberam Lock-ul
         self.consoleLock.release()
-        time.sleep(0.025)
+        time.sleep(0.05)
 
     # functie care incearca conectarea cu celalalt nod
     # functia salveaza instanta conexiunii intr-un obiect global
@@ -518,21 +520,24 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         self.SetConnectionStatus("Se deschide socket-ul...")
         time.sleep(0.5)
+
         # AF-INET pentru familia de adrese IPv4
         # SOCK_STREAM pentru comunicare prin TCP
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         # setam posibilitatea de a refolosi o adresa deja folosita
         # pentru a preintampina o eroare care apare din cauza inchiderii fortate a conexiunii
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
         # asocierea socket-uui cu o interfata specifica de retea si un port
         sock.bind((config["host"], config["port"]))
         self.SetConnectionStatus("Socket-ul a fost deschis cu succes...")
         time.sleep(0.5)
-        self.SetConnectionStatus("Se asteapta clienti...")
-        sock.listen()
 
         # asteptam conectarea unui client
         # apelam functia blocanta ce va returna conectiunea si adresa clientului
+        self.SetConnectionStatus("Se asteapta clienti...")
+        sock.listen()
         connection, address = sock.accept()
 
         # clientul este conectat si putem incepe comunicarea
@@ -559,19 +564,19 @@ class GraphicalUserInterface(Ui_MainWindow):
                 time.sleep(0.5)
                 self.SetConnectionStatus("* Se reia handshake-ul!")
             else:
-				# handshake efectuat cu succes
+                # handshake efectuat cu succes
                 if type == 0:
-					# initiem comunicarea prin TCP
+                    # initiem comunicarea prin TCP
 					# parasim bucla de reluare a handshake-ului, deoarece a fost efectuat cu succes
                     self.SetConnectionStatus("Handshake realizat cu succes!\nComunicare : TCP Sockets")
                     break
                 elif type == 1:
-					# initiem comunicarea prin UART
+                    # initiem comunicarea prin UART
 					# parasim bucla de reluare a handshake-ului
                     self.SetConnectionStatus("Handshake realizat cu succes!\nComunicare : UART")
                     break
                 else:
-					# tipul de comunicare identificat este eronat
+                    # tipul de comunicare identificat este eronat
 					# reluam handshake-ul
                     self.SetConnectionStatus("* Canal de comunicare ales eronat!")
 

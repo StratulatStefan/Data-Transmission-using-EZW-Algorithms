@@ -6,7 +6,7 @@ import serial
 # - functie care realizeaza handshake-ul cu clientul pentru a-l informa cu privire la modalitatea de comunicare
 # aleasa si pentru a stabili conexiunea cu acesta
 def CommunicationHandshake(printer, TCPConnection, comselection) -> bool:
-	 # raspuns returnat in cazul in care handshake-ul a esuat
+	# raspuns returnat in cazul in care handshake-ul a esuat
 	ErrorResponse = None, None, False
 	printer("Handshake\n")
 	# identificam modalitatea de comunicare
@@ -79,8 +79,8 @@ def CommunicationHandshake(printer, TCPConnection, comselection) -> bool:
 
 # functia care trimite mesaje de verificare a conexiunii, corespunzator mediului de comunicare ales
 def ConnectionCheck(printer,connection, selection) -> bool:
-        # determinam functiile necesare pentru citire si scriere, pe baza tipul de comunicare ales
-        # folosim referinte la acele functii
+	# determinam functiile necesare pentru citire si scriere, pe baza tipul de comunicare ales
+	# folosim referinte la acele functii
 	readFunction = uartREADMessage if selection == 1 else socketREADMessage if selection == 0 else None
 	writeFunction = uartWRITEMessage if selection == 1 else socketWRITEMessage if selection == 0 else None
 

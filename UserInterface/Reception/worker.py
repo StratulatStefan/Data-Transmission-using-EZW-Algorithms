@@ -24,6 +24,7 @@ class UI_Worker:
 
         return QPixmap.fromImage(img)
 
+    '''
     # functie care converteste o imagine PixMap la grayscale
     @staticmethod
     def GrayScalePixMap(pixmap):
@@ -35,3 +36,4 @@ class UI_Worker:
 
         # convertim imaginea grayscale la formatul pixmap
         return QPixmap.fromImage(grayscale)
+    '''

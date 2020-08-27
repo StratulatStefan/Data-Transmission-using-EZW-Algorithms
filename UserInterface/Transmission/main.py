@@ -1,6 +1,4 @@
-import sys
 from transmission_user_interface import *
-from communication.general_use import *
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -10,8 +8,9 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    # atasam functia de inchidere sigura a conexiunii (socket-ului)
+    # atasam functia de callback a inchiderii ferestrei; se va inchide sigur conexiunea dintre noduri (socket-ul)
     app.aboutToQuit.connect(SafeClose)
+
     window = MainWindow()
     window.show()
 

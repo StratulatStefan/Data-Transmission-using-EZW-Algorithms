@@ -7,7 +7,6 @@ def GenerateSequenceToSend(dominant):
     # returnam doar datele care trebuie transmise (nu avem nevoie de tot obiectul, ci doar de atributele symbol si valoarea de reconstructie
     return list(map(lambda coefficient : [coefficient.symbol, coefficient.reconstruction], dominant))
 
-
 # functie ce genereaza conventiile de encodare a significance_map
 def SignificanceMapEncodingConventions():
     # lista valorilor posibile din significance_map

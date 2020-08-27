@@ -41,7 +41,6 @@ def PlotMultiDWT(components, figure_index):
         PlotDWT(component, fig_index)
         fig_index += 1
 
-
 # functie care creeaza o imagine care sa contina toate cele 4 subdomenii rezultate din DWT
 def DWTResultComposer(items):
     # extragem cele 4 subdomenii
