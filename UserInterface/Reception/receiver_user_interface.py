@@ -171,11 +171,7 @@ class GraphicalUserInterface(Ui_MainWindow):
         self.connection_status.clear()
         if communication_type in [0, 1]:
             # daca am ajuns aici, inseamna ca handshake-ul a fost efectua cu succes si putem incepe transmiterea
-            if communication_type == 0:
-                Communication(self, self.SetConnectionStatus, connection, type)
-            else:
-                #UARTCommunication(self, self.SetConnectionStatus, connection)
-                pass
+            Communication(self, self.SetConnectionStatus, connection, type)
 
     # functie care va prelua datele receptionate si va recompune imaginea
     def DWTRecomposer(self, significance_map, reconstruction_values):

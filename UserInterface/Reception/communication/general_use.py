@@ -57,7 +57,7 @@ def socketREADMessage(sock):
 
 # functie pentru citirea octetilor din UART
 def uartREAD(port):
-        # citim 1 octet de pe portul serial
+	# citim 1 octet de pe portul serial
 	data = port.read()
         # determinam numarul de octeti ramasi in bufferul de intrare
 	remaining_bytes = port.inWaiting()
