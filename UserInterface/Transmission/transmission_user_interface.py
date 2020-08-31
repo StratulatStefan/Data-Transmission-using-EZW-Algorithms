@@ -96,7 +96,7 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # setam tipurile de fisiere admise (imagini)
         fileDialog.setFileMode(QFileDialog.AnyFile)
-        fileDialog.setNameFilter("Images (*.png *.jpg)")
+        fileDialog.setNameFilter("Images (*.png *.jpg *.jpeg)")
 
         # deschidem File Dialog-ul si preluam url-ul
         if fileDialog.exec_():
@@ -104,7 +104,8 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # prelucram url-ul astfel incat sa pastram doar sursa, eliminand protocolul (file:///)
         try:
-            url = url.replace("file:///", "")
+            photo_index = url.rfind("/")
+            url = "photos/" + url[photo_index + 1:]
         except Exception:
             return
 
@@ -229,7 +230,7 @@ class GraphicalUserInterface(Ui_MainWindow):
     # - folosita in cazul descompunerii
     def VirtualProxy(self):
         # incarcam o imagina de asteptare si o afisam in fereastra wavelet_label
-        qt_image = QPixmap("D:/Confidential/EZW Algorithm/loading.jpg")
+        qt_image = QPixmap("photos/loading.jpg")
         self.wavelet_label.setPixmap(qt_image.scaled(self.wavelet_label.width(),
                                                      self.wavelet_label.height(),
                                                      Qt.KeepAspectRatio))
