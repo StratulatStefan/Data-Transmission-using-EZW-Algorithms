@@ -44,7 +44,7 @@ connection_established = False
 # definim credentialele de realizare a conexiunii
 config = {
 	"host" : "192.168.43.43", # HOST-ul serverului
-	"port" : 7000		  # PORT-ul pe care este mapat serverul
+    "port" : 7000		  # PORT-ul pe care este mapat serverul
 }
 
 # functie apelata la inchiderea ferestrei, pentru inchiderea sigura a conexiunii cu celalalt nod
@@ -172,7 +172,7 @@ class GraphicalUserInterface(Ui_MainWindow):
         if communication_type in [0, 1]:
             # daca am ajuns aici, inseamna ca handshake-ul a fost efectua cu succes si putem incepe transmiterea
             if communication_type == 0:
-                TCPCommunication(self, self.SetConnectionStatus, connection)
+                Communication(self, self.SetConnectionStatus, connection, type)
             else:
                 #UARTCommunication(self, self.SetConnectionStatus, connection)
                 pass

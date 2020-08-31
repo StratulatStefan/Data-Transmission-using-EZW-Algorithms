@@ -426,14 +426,19 @@ class GraphicalUserInterface(Ui_MainWindow):
     def SendParameters(self):
         global connection
 
+        # extragem functia de citire/scriere in functie de modalitatea de comunicare selectata
+        communication_mode = self.communication_mode.currentText()
+        read_fun = socketREAD if "TCP" in communication_mode else uartREAD if "UART" in communication_mode else None
+        write_fun = socketWRITE if "TCP" in communication_mode else uartWRITE if "UART" in communication_mode else None
+
         # definim functia de trimitere a datelor prin socket
-        def EncodeAndSend(printer,message, type):
+        def EncodeAndSend(printer,message, type, read, write):
             data_to_send = data_encode(f"[{type}] {message}")
             printer(f"Trimitem {type} : {message}")
-            socketWRITE(connection, data_to_send)
+            write(connection, data_to_send)
 
             # asteptam confirmare pentru trimiterea datelor!
-            data = socketREAD(connection)
+            data = read(connection)
             time.sleep(0.25)
             printer(f"{type} a fost trimis cu succes!")
             time.sleep(0.5)
@@ -441,81 +446,86 @@ class GraphicalUserInterface(Ui_MainWindow):
         # trimitem numele imaginii
         filepath = self.image_source.toPlainText()
         filename = UI_Worker.ExtractFileName(filepath)
-        EncodeAndSend(self.SetConnectionStatus,filename, "filename")
+        EncodeAndSend(self.SetConnectionStatus,filename, "filename", read_fun, write_fun)
         time.sleep(0.1)
 
         # trimitem coordonatele dimensionale ale imaginii
         width = self.image_width.toPlainText()
         height = self.image_height.toPlainText()
         dimensions = f"{width} x {height}"
-        EncodeAndSend(self.SetConnectionStatus,dimensions, "dimensions")
+        EncodeAndSend(self.SetConnectionStatus,dimensions, "dimensions", read_fun, write_fun)
         time.sleep(0.1)
 
         # trimitem dimensiunea in kb a imaginii
         size = self.image_size.toPlainText()
-        EncodeAndSend(self.SetConnectionStatus,size,  "size")
+        EncodeAndSend(self.SetConnectionStatus,size,  "size", read_fun, write_fun)
         time.sleep(0.1)
 
         # trimitem nr. nivelelor de descompunere
         dec_levels = self.decomposition_levels.text()
-        EncodeAndSend(self.SetConnectionStatus,dec_levels, "decomposition_levels")
+        EncodeAndSend(self.SetConnectionStatus,dec_levels, "decomposition_levels", read_fun, write_fun)
         time.sleep(0.1)
 
         # trimitem tipul de alg. folosit in descompunere
         alg_dwt_type = self.DWT_type.currentText()
-        EncodeAndSend(self.SetConnectionStatus,alg_dwt_type, "decomposition_type")
+        EncodeAndSend(self.SetConnectionStatus,alg_dwt_type, "decomposition_type", read_fun, write_fun)
         time.sleep(0.1)
 
         # trimitem tipul de wavelet folosit
         wavelet_type = self.wavelet_type.currentText()
-        EncodeAndSend(self.SetConnectionStatus,wavelet_type, "wavelet_type")
+        EncodeAndSend(self.SetConnectionStatus,wavelet_type, "wavelet_type", read_fun, write_fun)
         time.sleep(0.1)
 
         # trimitem nr. de iteratii
         loops = self.loops.text()
-        EncodeAndSend(self.SetConnectionStatus,loops, "iteration_loops")
+        EncodeAndSend(self.SetConnectionStatus,loops, "iteration_loops", read_fun, write_fun)
         time.sleep(0.1)
 
         # trimitem encodarea significance map
         signif_map_conventions = str(SignificanceMapEncodingConventions())
-        EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions")
+        EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions", read_fun, write_fun)
         time.sleep(0.1)
 
     # functie pentru trimitea unor liste catre celalalt nod (significance map & reconstruction values)
     def SendCoefficients(self, significance_map, reconstruction_values):
         global connection
 
+        # extragem functia de citire/scriere in functie de modalitatea de comunicare selectata
+        communication_mode = self.communication_mode.currentText()
+        read_fun = socketREAD if "TCP" in communication_mode else uartREAD if "UART" in communication_mode else None
+        write_fun = socketWRITEMessage if "TCP" in communication_mode else uartWRITEMessage if "UART" in communication_mode else None
+
         # trimitem un mesaj de inceput pentru a delimita o noua iteratie
         self.SetConnectionStatus("* Trimitem mesajul de pornire")
-        socketWRITEMessage(connection, "[start]")
-        data = socketREAD(connection)
+        write_fun(connection, "[start]")
+        data = read_fun(connection)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea mesajului de start!")
         time.sleep(0.25)
 
         self.SetConnectionStatus("* Trimitem significance map")
         sig_map_str = str(significance_map).replace("[","").replace("]","").replace(" ","")
-        socketWRITEMessage(connection, sig_map_str)
-        data = socketREAD(connection)
+        write_fun(connection, sig_map_str)
+        data = read_fun(connection)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea significance map!")
         time.sleep(0.25)
 
         self.SetConnectionStatus("* Trimitem delimitatorul")
-        socketWRITEMessage(connection,"[delimitator]")
-        data = socketREAD(connection)
+        write_fun(connection,"[delimitator]")
+        data = read_fun(connection)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea delimitatorului!")
         time.sleep(0.25)
 
         self.SetConnectionStatus("* Trimitem reconstruction values")
         rec_vals_str = str(reconstruction_values).replace("[","").replace("]","").replace(" ","")
-        socketWRITEMessage(connection, rec_vals_str)
-        data = socketREAD(connection)
+        write_fun(connection, rec_vals_str)
+        data = read_fun(connection)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea reconstruction values!")
         time.sleep(0.25)
 
         # trimitem mesajul de finalizare
         self.SetConnectionStatus("* Trimitem finalizatorul")
-        socketWRITEMessage(connection, "[stop]")
-        data = socketREAD(connection)
+        write_fun(connection, "[stop]")
+        data = read_fun(connection)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea mesajului de finalizare a unei iteratii!")
         time.sleep(0.25)
 
