@@ -420,7 +420,10 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # semnalam finalizarea trimiterii tuturor datelor necesare
         self.SetConnectionStatus("* Trimitem mesajul de finalizare completa...")
-        socketWRITEMessage(connection, "[finish]")
+
+        communication_mode = self.communication_mode.currentText()
+        write_fun = socketWRITEMessage if "TCP" in communication_mode else uartWRITEMessage if "UART" in communication_mode else None
+        write_fun(connection, "[finish]")
 
     # functie pentru trimiterea unor parametrii catre celalalt nod (numele imaginii, etc)
     def SendParameters(self):
@@ -436,40 +439,40 @@ class GraphicalUserInterface(Ui_MainWindow):
             data_to_send = data_encode(f"[{type}] {message}")
             printer(f"Trimitem {type} : {message}")
             write(connection, data_to_send)
+            time.sleep(0.05)
 
             # asteptam confirmare pentru trimiterea datelor!
             data = read(connection)
-            time.sleep(0.25)
             printer(f"{type} a fost trimis cu succes!")
-            time.sleep(0.5)
+            time.sleep(0.25)
 
         # trimitem numele imaginii
         filepath = self.image_source.toPlainText()
         filename = UI_Worker.ExtractFileName(filepath)
         EncodeAndSend(self.SetConnectionStatus,filename, "filename", read_fun, write_fun)
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         # trimitem coordonatele dimensionale ale imaginii
         width = self.image_width.toPlainText()
         height = self.image_height.toPlainText()
         dimensions = f"{width} x {height}"
         EncodeAndSend(self.SetConnectionStatus,dimensions, "dimensions", read_fun, write_fun)
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         # trimitem dimensiunea in kb a imaginii
         size = self.image_size.toPlainText()
         EncodeAndSend(self.SetConnectionStatus,size,  "size", read_fun, write_fun)
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         # trimitem nr. nivelelor de descompunere
         dec_levels = self.decomposition_levels.text()
         EncodeAndSend(self.SetConnectionStatus,dec_levels, "decomposition_levels", read_fun, write_fun)
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         # trimitem tipul de alg. folosit in descompunere
         alg_dwt_type = self.DWT_type.currentText()
         EncodeAndSend(self.SetConnectionStatus,alg_dwt_type, "decomposition_type", read_fun, write_fun)
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         # trimitem tipul de wavelet folosit
         wavelet_type = self.wavelet_type.currentText()
@@ -479,12 +482,12 @@ class GraphicalUserInterface(Ui_MainWindow):
         # trimitem nr. de iteratii
         loops = self.loops.text()
         EncodeAndSend(self.SetConnectionStatus,loops, "iteration_loops", read_fun, write_fun)
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         # trimitem encodarea significance map
         signif_map_conventions = str(SignificanceMapEncodingConventions())
         EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions", read_fun, write_fun)
-        time.sleep(0.1)
+        time.sleep(0.5)
 
     # functie pentru trimitea unor liste catre celalalt nod (significance map & reconstruction values)
     def SendCoefficients(self, significance_map, reconstruction_values):
@@ -592,7 +595,7 @@ class GraphicalUserInterface(Ui_MainWindow):
         while True:
             # informam clientul cu privire la alegerea facuta si realizam handshake-ul
             # salvam status-ul handshake-ului, conexiunea si tipul conexiunii
-            type, conn, HSstatus = CommunicationHandshake(self.SetConnectionStatus, connection, comSelection)
+            type, connection, HSstatus = CommunicationHandshake(self.SetConnectionStatus, connection, comSelection)
             if not HSstatus:
                 # handshake esuat
                 self.SetConnectionStatus("* Handshake-ul a esuat!")
