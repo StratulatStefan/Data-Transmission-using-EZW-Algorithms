@@ -91,12 +91,14 @@ def ConnectionCheck(printer,connection, selection) -> bool:
 		verification_msg = f"[HS] MSG{index}"
 		# trimitem mesajul
 		printer(f"* Am trimis MSG{index}")
+		time.sleep(0.05)
 		writeFunction(connection, verification_msg)
 		# asteptam confirmare
 		printer(f"* Asteptam ACK corespunzator")
+		time.sleep(0.05)
 		ack_data = readFunction(connection)
 		# am primit ACK
 		printer(f">>> Am primit ack pentru mesajul trimis : {ack_data}")
-		time.sleep(1)
+		time.sleep(0.5)
 	printer("* Handshake realizat cu succes!")
 	return True

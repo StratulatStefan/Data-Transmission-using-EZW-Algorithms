@@ -35,6 +35,8 @@ wavelet_decomposition = []
 # definim un obiect care va contine o instanta a socket-ului prin care se va realiza conexiunea
 sock = None
 
+app = None
+
 # definim un obiect care va contine o instanta a conexiunii dintre cele doua noduri
 connection = None
 
@@ -43,7 +45,7 @@ connection_established = False
 
 # definim un dictionar care va contine credentialele de comunicare
 config = {
-	"host" : "192.168.100.170",
+	"host" : "192.168.43.226",
 	"port" : 7000 		  # PORT-ul pe care serverul asculta
 }
 
@@ -56,7 +58,8 @@ def SafeClose():
 
 
 class GraphicalUserInterface(Ui_MainWindow):
-    def __init__(self, window):
+    def __init__(self, window, app):
+        self.app = app
         self.setupUi(window)
         window.setFixedSize(window.size())
         self.ExtraObjectAttributes()
@@ -311,6 +314,9 @@ class GraphicalUserInterface(Ui_MainWindow):
             self.HandleBasicException(exception)
             return
 
+        self.SetConnectionStatus("Incepem trimiterea unei noi imagini!")
+        time.sleep(1)
+
         # curatam consola de afisare a statusului!
         self.connection_status.clear()
 
@@ -424,6 +430,9 @@ class GraphicalUserInterface(Ui_MainWindow):
             data_to_send = data_encode(f"[{type}] {message}")
             printer(f"Trimitem {type} : {message}")
             socketWRITE(connection, data_to_send)
+
+            # asteptam confirmare pentru trimiterea datelor!
+            data = socketREAD(connection)
             time.sleep(0.25)
             printer(f"{type} a fost trimis cu succes!")
             time.sleep(0.5)
@@ -432,36 +441,44 @@ class GraphicalUserInterface(Ui_MainWindow):
         filepath = self.image_source.toPlainText()
         filename = UI_Worker.ExtractFileName(filepath)
         EncodeAndSend(self.SetConnectionStatus,filename, "filename")
+        time.sleep(0.1)
 
         # trimitem coordonatele dimensionale ale imaginii
         width = self.image_width.toPlainText()
         height = self.image_height.toPlainText()
         dimensions = f"{width} x {height}"
         EncodeAndSend(self.SetConnectionStatus,dimensions, "dimensions")
+        time.sleep(0.1)
 
         # trimitem dimensiunea in kb a imaginii
         size = self.image_size.toPlainText()
         EncodeAndSend(self.SetConnectionStatus,size,  "size")
+        time.sleep(0.1)
 
         # trimitem nr. nivelelor de descompunere
         dec_levels = self.decomposition_levels.text()
         EncodeAndSend(self.SetConnectionStatus,dec_levels, "decomposition_levels")
+        time.sleep(0.1)
 
         # trimitem tipul de alg. folosit in descompunere
         alg_dwt_type = self.DWT_type.currentText()
         EncodeAndSend(self.SetConnectionStatus,alg_dwt_type, "decomposition_type")
+        time.sleep(0.1)
 
         # trimitem tipul de wavelet folosit
         wavelet_type = self.wavelet_type.currentText()
         EncodeAndSend(self.SetConnectionStatus,wavelet_type, "wavelet_type")
+        time.sleep(0.1)
 
         # trimitem nr. de iteratii
         loops = self.loops.text()
         EncodeAndSend(self.SetConnectionStatus,loops, "iteration_loops")
+        time.sleep(0.1)
 
         # trimitem encodarea significance map
         signif_map_conventions = str(SignificanceMapEncodingConventions())
         EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions")
+        time.sleep(0.1)
 
     # functie pentru trimitea unor liste catre celalalt nod (significance map & reconstruction values)
     def SendCoefficients(self, significance_map, reconstruction_values):
@@ -470,25 +487,36 @@ class GraphicalUserInterface(Ui_MainWindow):
         # trimitem un mesaj de inceput pentru a delimita o noua iteratie
         self.SetConnectionStatus("* Trimitem mesajul de pornire")
         socketWRITEMessage(connection, "[start]")
-        time.sleep(1)
+        data = socketREAD(connection)
+        self.SetConnectionStatus("* Am primit confirmare pentru primirea mesajului de start!")
+        time.sleep(0.25)
 
         self.SetConnectionStatus("* Trimitem significance map")
         sig_map_str = str(significance_map).replace("[","").replace("]","").replace(" ","")
         socketWRITEMessage(connection, sig_map_str)
-        time.sleep(1)
+        data = socketREAD(connection)
+        self.SetConnectionStatus("* Am primit confirmare pentru primirea significance map!")
+        time.sleep(0.25)
 
         self.SetConnectionStatus("* Trimitem delimitatorul")
         socketWRITEMessage(connection,"[delimitator]")
-        time.sleep(1)
+        data = socketREAD(connection)
+        self.SetConnectionStatus("* Am primit confirmare pentru primirea delimitatorului!")
+        time.sleep(0.25)
 
         self.SetConnectionStatus("* Trimitem reconstruction values")
         rec_vals_str = str(reconstruction_values).replace("[","").replace("]","").replace(" ","")
         socketWRITEMessage(connection, rec_vals_str)
-        time.sleep(1)
+        data = socketREAD(connection)
+        self.SetConnectionStatus("* Am primit confirmare pentru primirea reconstruction values!")
+        time.sleep(0.25)
 
         # trimitem mesajul de finalizare
         self.SetConnectionStatus("* Trimitem finalizatorul")
         socketWRITEMessage(connection, "[stop]")
+        data = socketREAD(connection)
+        self.SetConnectionStatus("* Am primit confirmare pentru primirea mesajului de finalizare a unei iteratii!")
+        time.sleep(0.25)
 
     # functie pentru setarea label-ului ce descrie statusul conexiunii
     def SetConnectionStatus(self, text):
@@ -501,7 +529,9 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # eliberam Lock-ul
         self.consoleLock.release()
-        time.sleep(0.1)
+        time.sleep(0.05)
+
+        self.app.processEvents()
 
     # functie care incearca conectarea cu celalalt nod
     # functia salveaza instanta conexiunii intr-un obiect global
@@ -542,10 +572,6 @@ class GraphicalUserInterface(Ui_MainWindow):
         # clientul este conectat si putem incepe comunicarea
         self.SetConnectionStatus(f"S-a conectat un client : \n{address}")
 
-        # modificam butonul de realizare a conexiunii si setam flagul coresp.
-        self.check_connections.setText("Stop connection")
-        connection_established = True
-
         # identificam modalitatea de comunicare
         communicationMode = self.communication_mode.currentText()
         comSelection = 0 if "TCP" in communicationMode else 1 if "UART" in communicationMode else None
@@ -579,5 +605,9 @@ class GraphicalUserInterface(Ui_MainWindow):
                     self.SetConnectionStatus("* Canal de comunicare ales eronat!")
 
         self.SetConnectionStatus("Ready to send data...\n")
+
+        # modificam butonul de realizare a conexiunii si setam flagul coresp.
+        self.check_connections.setText("Stop connection")
+        connection_established = True
 
 

@@ -19,7 +19,7 @@ def CommunicationHandshake(printer,sock, data) -> bool:
 			errorMessage = "Waiting for handshake!"
 			socketWRITEMessage(sock, errorMessage)
 			reloads += 1
-			time.sleep(1)
+			time.sleep(0.5)
 			continue
 		else:
 			reloads = 1

@@ -43,7 +43,7 @@ connection_established = False
 
 # definim credentialele de realizare a conexiunii
 config = {
-	"host" : "192.168.100.170", # HOST-ul serverului
+	"host" : "192.168.43.226", # HOST-ul serverului
 	"port" : 7000		  # PORT-ul pe care este mapat serverul
 }
 
@@ -55,13 +55,16 @@ def SafeClose():
         sock.close() if sock != None else None
 
 class GraphicalUserInterface(Ui_MainWindow):
-    def __init__(self, window):
+    def __init__(self, window, app):
         self.setupUi(window)
-        window.setFixedSize(window.size())
+        self.app = app
         self.consoleLock = threading.RLock()
 
     # setam interactiunile posibile ale interfetei grafice
     def SetActions(self):
+        self.current_iteration.setText(str(0))
+        self.current_iteration.repaint()
+        self.current_iteration.toPlainText()
         # atasam functia de callback pentru cautarea si stabilirea de conexiuni
         self.check_connections.clicked.connect(self.CheckForConnections)
 
@@ -83,11 +86,13 @@ class GraphicalUserInterface(Ui_MainWindow):
 
     # functie pentru setarea label-ului ce descrie statusul conexiunii
     def SetConnectionStatus(self, text):
-        self.consoleLock.acquire()
-        self.connection_status.append(text)
+        #self.consoleLock.acquire()
+        self.connection_status.setText(text)
         self.connection_status.repaint()
-        self.consoleLock.release()
-        time.sleep(0.025)
+        #self.consoleLock.release()
+        time.sleep(0.05)
+
+        self.app.processEvents()
 
     # functie care incearca conectarea cu celalalt nod
     # functia salveaza instanta conexiunii intr-un obiect global
@@ -205,29 +210,28 @@ class GraphicalUserInterface(Ui_MainWindow):
         wavelet_type = self.wavelet_type.toPlainText().lower()
 
         image = None
-        if decomposition_algorithm == "pywavelets" :
+        #if decomposition_algorithm == "pywavelets" :
             # decompunem imaginea in cele 4 subbenzi
-            # repara aici!
-            rows, cols = DWT.shape
-            levels = int(np.power(2, decomposition_levels))
-            wavelet_type = defined_filters[wavelet_type]
-            while levels != 1:
-                rows, cols = list(map(lambda value : int(value / levels), DWT.shape))
-                coeffs = (DWT[:rows, :cols],
-                         (DWT[:rows, cols : int(cols * 2)],
-                          DWT[rows: int(rows * 2), :cols],
-                          DWT[rows: int(rows * 2), cols:int(cols * 2)]))
-                image = pywt.idwt2(coeffs, wavelet_type)
-                DWT[:int(rows * 2), : int(cols * 2)] = image
-                levels = int(levels / 2)
-        elif decomposition_algorithm == "convolution - singlethread":
-            pass
-        elif decomposition_algorithm == "convolution - multithread":
-            pass
-        elif decomposition_algorithm == "linear-based - singlethread":
-            pass
-        elif decomposition_algorithm == "linear-baseds - singlethread":
-            pass
+        rows, cols = DWT.shape
+        levels = int(np.power(2, decomposition_levels))
+        wavelet_type = defined_filters[wavelet_type]
+        while levels != 1:
+            rows, cols = list(map(lambda value : int(value / levels), DWT.shape))
+            coeffs = (DWT[:rows, :cols],
+                    (DWT[:rows, cols : int(cols * 2)],
+                    DWT[rows: int(rows * 2), :cols],
+                    DWT[rows: int(rows * 2), cols:int(cols * 2)]))
+            image = pywt.idwt2(coeffs, "haar")
+            DWT[:int(rows * 2), : int(cols * 2)] = image
+            levels = int(levels / 2)
+        #elif decomposition_algorithm == "convolution - singlethread":
+         #   pass
+        #elif decomposition_algorithm == "convolution - multithread":
+         #   pass
+        #elif decomposition_algorithm == "linear-based - singlethread":
+         #   pass
+        #elif decomposition_algorithm == "linear-baseds - singlethread":
+         #   pass
 
         image = UI_Worker.ConvertNumpyImagetoPixmap(image)
         width, height = self.image_label.width(), self.image_label.height()

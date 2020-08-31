@@ -21,7 +21,7 @@ class Ui_MainWindow(object):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.setWindowModality(Qt.ApplicationModal)
-        MainWindow.resize(1579, 1008)
+        MainWindow.resize(1579, 1004)
         MainWindow.setLayoutDirection(Qt.LeftToRight)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")

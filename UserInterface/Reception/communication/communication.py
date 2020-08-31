@@ -61,6 +61,7 @@ def TCPCommunication(gui_handler, printer, connection):
 				  ]
 
 	delimiter_found = False
+	finish_found = False
 	sig_map = ""
 	rec_vals = ""
 
@@ -72,15 +73,34 @@ def TCPCommunication(gui_handler, printer, connection):
 		data = socketREAD(connection)
 
 		# definim conditia de finalizare a trimiterii tuturor datelor
-		if CheckForParameter(data, "finish") : break
+		if CheckForParameter(data, "finish") :
+			finish_found = True
+			printer("Am primit toate datele necesare!")
+			socketWRITEMessage(connection, "* Trimitem confirmare pentru primirea mesajului de incheiere a trimiterii tututor pachetelor!")
+
+			gui_handler.current_iteration.setText(str(0))
+			gui_handler.current_iteration.repaint()
+			gui_handler.app.processEvents()
+
 		# definim conditia de incepere a unei noi iteratii de primire a coeficientilor
 		elif CheckForParameter(data, "start"):
+			if finish_found == True:
+				printer("Primim o noua imagine...")
+				time.sleep(1)
+				finish_found = False
 			# curatam obiectele corespunzatoare
 			significance_map = []
 			reconstruction_values = []
 			delimiter_found = False
 			sig_map = ""
 			rec_vals = ""
+			printer("Incepem primirea coeficientilor!")
+			socketWRITEMessage(connection, "* Trimitem confirmare pentru primirea mesajului de receptionare a pachetelor la o noua iteratie!")
+
+			current_iteration = int(gui_handler.current_iteration.toPlainText()) + 1
+			gui_handler.current_iteration.setText(str(current_iteration))
+			gui_handler.current_iteration.repaint()
+			gui_handler.app.processEvents()
 			continue
 		# definim conditia de finalizare a unei iteratii
 		elif CheckForParameter(data, "stop"):
@@ -101,12 +121,16 @@ def TCPCommunication(gui_handler, printer, connection):
 
 			# realizam recompunerea coeficientilor pe baza significance map si reconstruction values
 			# totodata, se recompune imaginea finala si se afiseaza pe interfata
+			printer("Am primit significance map si reconstruction values!")
 			gui_handler.DWTRecomposer(significance_map, reconstruction_values)
+			socketWRITEMessage(connection, "* Trimitem confirmare pentru mesajul de finalizare a unei iteratii!")
 		# definim conditia de mijloc a trimiterii celor doua liste de coeficienti
 		elif CheckForParameter(data, "delimitator"):
 			# am primit delimitatorul, deci s-au trimis toate valorile din significance map
 			# urmeaza sa se trimita valorile din reconstruction values
 			delimiter_found = True
+			socketWRITEMessage(connection, "* Trimitem confirmare pentru primirea delimitatorului!")
+			gui_handler.app.processEvents()
 			continue
 		# verificam daca am primit un parametru : mesaj de tipul "[type] content"
 		for parameter in parameters:
@@ -118,10 +142,11 @@ def TCPCommunication(gui_handler, printer, connection):
 				#setam numele pe labelul de pe interfata
 				parameter["ui_object"].setText(parameter_data)
 				parameter["ui_object"].repaint()
-				time.sleep(0.01)
 				parameters_found = True
 				break
 		if parameters_found == True:
+			socketWRITEMessage(connection, "* Trimitem confirmare pentru primirea unui parametru!")
+			gui_handler.app.processEvents()
 			continue
 		else:
 			# nu am primit un parametru sau vreo conditie de pornire/oprire,
@@ -129,8 +154,11 @@ def TCPCommunication(gui_handler, printer, connection):
 			data_recv = data.decode("utf-8")
 			if delimiter_found == True:
 				rec_vals += data_recv
+				socketWRITEMessage(connection, "* Trimitem confirmare pentru primirea reconstruction values!")
 			else:
 				sig_map += data_recv
+				socketWRITEMessage(connection, "* Trimitem confirmare pentru primirea significance map!")
+
 
 # functia care realizeaza transmiterea fisierelor prin UART
 def UARTCommunication(gui_handler, printer, connection):
@@ -175,6 +203,9 @@ def UARTCommunication(gui_handler, printer, connection):
 		# asteptam (blocant) receptionarea a 1024 de octeti
 		data = uartREAD(connection)
 
+		socketWRITE(connection, "Am primit mesajul!")
+		printer("Am trimis confirmare pentru primire!")
+		time.sleep(0.5)
 		# definim conditia de finalizare a trimiterii tuturor datelor
 		if CheckForParameter(data, "finish"):
 			break
