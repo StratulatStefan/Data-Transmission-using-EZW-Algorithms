@@ -45,7 +45,7 @@ connection_established = False
 
 # definim un dictionar care va contine credentialele de comunicare
 config = {
-	"host" : "192.168.43.226",
+	"host" : "192.168.43.43",
 	"port" : 7000 		  # PORT-ul pe care serverul asculta
 }
 

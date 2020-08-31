@@ -43,7 +43,7 @@ connection_established = False
 
 # definim credentialele de realizare a conexiunii
 config = {
-	"host" : "192.168.43.226", # HOST-ul serverului
+	"host" : "192.168.43.43", # HOST-ul serverului
 	"port" : 7000		  # PORT-ul pe care este mapat serverul
 }
 
