@@ -13,7 +13,7 @@ from PySide2.QtCore import QTimer, QThread
 
 from api.wavelets import *
 import time
-os.system("pyside2-uic receiver.ui > receiver_gui.py")
+#os.system("pyside2-uic receiver.ui > receiver_gui.py")
 
 # - am facut conversia interfetei la cod sursa; urmeaza, asadar, sa incarcam acest cod in programul principal si sa il
 # utilizam
