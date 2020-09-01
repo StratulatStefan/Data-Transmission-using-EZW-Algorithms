@@ -110,18 +110,13 @@ def Communication(gui_handler, printer, connection, type):
 		elif CheckForParameter(data, "stop"):
 			# in acest moment am primit toate datele necesare recompunerii imaginii la iteratia curenta
 			# apelam functia de decodificare si reconstructie
-			if sig_map[0] == ",":
-				sig_map = sig_map[1:]
-			if sig_map[-1] == ",":
-				sig_map = sig_map[:-1]
-			if rec_vals[0] == ",":
-				rec_vals = rec_vals[1:]
-			if rec_vals[-1] == ",":
-				rec_vals = rec_vals[:-1]
-
 			# recompunem listele corespunzatoare
-			significance_map = list(map(lambda value: int(value), sig_map.split(",")))
-			reconstruction_values = list(map(lambda value: int(value), rec_vals.split(",")))
+			significance_map = list(filter(lambda value : value != "", sig_map.split(",")))
+			significance_map = list(map(lambda value: int(value), significance_map))
+
+			print(len(significance_map))
+			reconstruction_values = list(filter(lambda value : value != "", rec_vals.split(",")))
+			reconstruction_values = list(map(lambda value: int(value), reconstruction_values))
 
 			# realizam recompunerea coeficientilor pe baza significance map si reconstruction values
 			# totodata, se recompune imaginea finala si se afiseaza pe interfata
@@ -157,8 +152,8 @@ def Communication(gui_handler, printer, connection, type):
 			# primim significance map sau valorile de reconstructie
 			data_recv = data.decode("utf-8")
 			if delimiter_found == True:
-				rec_vals += data_recv
-				write_fun(connection, "* Trimitem confirmare pentru primirea reconstruction values!")
+				rec_vals += data_recv + ","
+				#write_fun(connection, "* Trimitem confirmare pentru primirea reconstruction values!")
 			else:
-				sig_map += data_recv
-				write_fun(connection, "* Trimitem confirmare pentru primirea significance map!")
+				sig_map += data_recv + ","
+				#write_fun(connection, "* Trimitem confirmare pentru primirea significance map!")

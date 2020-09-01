@@ -1,5 +1,5 @@
 import re
-
+import time
 
 # functie lambda care codifica un mesaj din format string in format binar
 data_encode = lambda message : message.encode("utf-8")
@@ -34,6 +34,7 @@ def socketWRITEMessage(sock, message):
 # functie folosita pentru transmiterea octetilor prin UART
 def uartWRITE(port, message):
         # trimitem mesajul encodat
+	port.reset_output_buffer()
 	port.write(message)
 
 # functie folosita pentru transmiterea unui mesaj prin UART
@@ -59,10 +60,12 @@ def socketREADMessage(sock):
 def uartREAD(port):
 	# citim 1 octet de pe portul serial
 	data = port.read()
+	time.sleep(0.075)
         # determinam numarul de octeti ramasi in bufferul de intrare
 	remaining_bytes = port.inWaiting()
         # citim octetii ramasi
 	data += port.read(remaining_bytes)
+	port.reset_input_buffer()
 	return data
 
 # functie pentru citirea unui mesaj din UART
