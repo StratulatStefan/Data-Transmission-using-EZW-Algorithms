@@ -359,6 +359,7 @@ class GraphicalUserInterface(Ui_MainWindow):
             start = time.time_ns()
 
             # Extragem lista dominanta, care contine coeficientii care nu au fost inca determinati ca fiind significants
+            self.SetConnectionStatus("Se efectueaza pasul dominant..")
             dominantList, coefficients = DominantPass(coefficients, (rows, cols), decomposition_levels,
                                                       int(threshold / np.power(2, loop)))
 
@@ -374,6 +375,7 @@ class GraphicalUserInterface(Ui_MainWindow):
             # asadar, pentru a determina valorile insignificante, facem diferenta celor doua liste
             dominantList = ListsDifference(dominantList, subordinateList)
 
+            self.SetConnectionStatus("Se efectueaza pasul subordonat..")
             # efectuam pasul subordonat, in care toti coeficientii significant sunt encodati cu 0 si 1 avand in vedere pozitia in intervalul de incertitudine
             subordinateList = SubordinatePass(subordinateList, threshold, loop)
 
@@ -422,8 +424,11 @@ class GraphicalUserInterface(Ui_MainWindow):
         self.SetConnectionStatus("* Trimitem mesajul de finalizare completa...")
 
         communication_mode = self.communication_mode.currentText()
-        write_fun = socketWRITEMessage if "TCP" in communication_mode else uartWRITEMessage if "UART" in communication_mode else None
+        write_fun = socketWRITEMessage if "TCP" in communication_mode else uartWRITEMessage if "UART" in communication_mode else None 
+        read_fun = socketREADMessage if "TCP" in communication_mode else uartREADMessage if "UART" in communication_mode else None
         write_fun(connection, "[finish]")
+        data = read_fun(connection)
+        self.SetConnectionStatus("Algoritm finalizat cu succes!")
 
     # functie pentru trimiterea unor parametrii catre celalalt nod (numele imaginii, etc)
     def SendParameters(self):
@@ -450,44 +455,44 @@ class GraphicalUserInterface(Ui_MainWindow):
         filepath = self.image_source.toPlainText()
         filename = UI_Worker.ExtractFileName(filepath)
         EncodeAndSend(self.SetConnectionStatus,filename, "filename", read_fun, write_fun)
-        time.sleep(0.5)
+        time.sleep(0.25)
 
         # trimitem coordonatele dimensionale ale imaginii
         width = self.image_width.toPlainText()
         height = self.image_height.toPlainText()
         dimensions = f"{width} x {height}"
         EncodeAndSend(self.SetConnectionStatus,dimensions, "dimensions", read_fun, write_fun)
-        time.sleep(0.5)
+        time.sleep(0.25)
 
         # trimitem dimensiunea in kb a imaginii
         size = self.image_size.toPlainText()
         EncodeAndSend(self.SetConnectionStatus,size,  "size", read_fun, write_fun)
-        time.sleep(0.5)
+        time.sleep(0.25)
 
         # trimitem nr. nivelelor de descompunere
         dec_levels = self.decomposition_levels.text()
         EncodeAndSend(self.SetConnectionStatus,dec_levels, "decomposition_levels", read_fun, write_fun)
-        time.sleep(0.5)
+        time.sleep(0.25)
 
         # trimitem tipul de alg. folosit in descompunere
         alg_dwt_type = self.DWT_type.currentText()
         EncodeAndSend(self.SetConnectionStatus,alg_dwt_type, "decomposition_type", read_fun, write_fun)
-        time.sleep(0.5)
+        time.sleep(0.25)
 
         # trimitem tipul de wavelet folosit
         wavelet_type = self.wavelet_type.currentText()
         EncodeAndSend(self.SetConnectionStatus,wavelet_type, "wavelet_type", read_fun, write_fun)
-        time.sleep(0.1)
+        time.sleep(0.25)
 
         # trimitem nr. de iteratii
         loops = self.loops.text()
         EncodeAndSend(self.SetConnectionStatus,loops, "iteration_loops", read_fun, write_fun)
-        time.sleep(0.5)
+        time.sleep(0.25)
 
         # trimitem encodarea significance map
         signif_map_conventions = str(SignificanceMapEncodingConventions())
         EncodeAndSend(self.SetConnectionStatus, signif_map_conventions, "conventions", read_fun, write_fun)
-        time.sleep(0.5)
+        time.sleep(0.25)
 
     # functie pentru trimitea unor liste catre celalalt nod (significance map & reconstruction values)
     def SendCoefficients(self, significance_map, reconstruction_values):
@@ -506,7 +511,6 @@ class GraphicalUserInterface(Ui_MainWindow):
         time.sleep(0.25)
 
         buf_size = 1024 if "UART" in communication_mode else len(significance_map) if "TCP" in communication_mode else None
-        print(f"lungime = {len(significance_map)}")
         signif_maps = [significance_map[index : index + buf_size] for index in range(0, len(significance_map), buf_size)]
         self.SetConnectionStatus("* Trimitem significance map")
         for maps in signif_maps:
