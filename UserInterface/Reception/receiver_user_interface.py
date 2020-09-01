@@ -206,8 +206,7 @@ class GraphicalUserInterface(Ui_MainWindow):
         wavelet_type = self.wavelet_type.toPlainText().lower()
 
         image = None
-        #if decomposition_algorithm == "pywavelets" :
-            # decompunem imaginea in cele 4 subbenzi
+      
         rows, cols = DWT.shape
         levels = int(np.power(2, decomposition_levels))
         wavelet_type = defined_filters[wavelet_type]
@@ -220,14 +219,6 @@ class GraphicalUserInterface(Ui_MainWindow):
             image = pywt.idwt2(coeffs, "haar")
             DWT[:int(rows * 2), : int(cols * 2)] = image
             levels = int(levels / 2)
-        #elif decomposition_algorithm == "convolution - singlethread":
-         #   pass
-        #elif decomposition_algorithm == "convolution - multithread":
-         #   pass
-        #elif decomposition_algorithm == "linear-based - singlethread":
-         #   pass
-        #elif decomposition_algorithm == "linear-baseds - singlethread":
-         #   pass
 
         image = UI_Worker.ConvertNumpyImagetoPixmap(image)
         width, height = self.image_label.width(), self.image_label.height()

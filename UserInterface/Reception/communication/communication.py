@@ -114,15 +114,17 @@ def Communication(gui_handler, printer, connection, type):
 			significance_map = list(filter(lambda value : value != "", sig_map.split(",")))
 			significance_map = list(map(lambda value: int(value), significance_map))
 
-			print(len(significance_map))
 			reconstruction_values = list(filter(lambda value : value != "", rec_vals.split(",")))
 			reconstruction_values = list(map(lambda value: int(value), reconstruction_values))
 
 			# realizam recompunerea coeficientilor pe baza significance map si reconstruction values
 			# totodata, se recompune imaginea finala si se afiseaza pe interfata
 			printer("Am primit significance map si reconstruction values!")
+			printer("Recompunem coeficientii si imaginea finala..")
 			gui_handler.DWTRecomposer(significance_map, reconstruction_values)
+			printer("Recompunere realizata cu succes")
 			write_fun(connection, "* Trimitem confirmare pentru mesajul de finalizare a unei iteratii!")
+			time.sleep(1)
 		# definim conditia de mijloc a trimiterii celor doua liste de coeficienti
 		elif CheckForParameter(data, "delimitator"):
 			# am primit delimitatorul, deci s-au trimis toate valorile din significance map
