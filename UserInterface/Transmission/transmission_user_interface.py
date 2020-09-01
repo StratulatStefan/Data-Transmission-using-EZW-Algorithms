@@ -438,8 +438,8 @@ class GraphicalUserInterface(Ui_MainWindow):
         def EncodeAndSend(printer,message, type, read, write):
             data_to_send = data_encode(f"[{type}] {message}")
             printer(f"Trimitem {type} : {message}")
-            write(connection, data_to_send)
             time.sleep(0.05)
+            write(connection, data_to_send)
 
             # asteptam confirmare pentru trimiterea datelor!
             data = read(connection)
@@ -505,10 +505,14 @@ class GraphicalUserInterface(Ui_MainWindow):
         self.SetConnectionStatus("* Am primit confirmare pentru primirea mesajului de start!")
         time.sleep(0.25)
 
+        buf_size = 1024 if "UART" in communication_mode else len(significance_map) if "TCP" in communication_mode else None
+        print(f"lungime = {len(significance_map)}")
+        signif_maps = [significance_map[index : index + buf_size] for index in range(0, len(significance_map), buf_size)]
         self.SetConnectionStatus("* Trimitem significance map")
-        sig_map_str = str(significance_map).replace("[","").replace("]","").replace(" ","")
-        write_fun(connection, sig_map_str)
-        data = read_fun(connection)
+        for maps in signif_maps:
+            sig_map_str = str(maps).replace("[","").replace("]","").replace(" ","")
+            write_fun(connection, sig_map_str)
+            time.sleep(0.1)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea significance map!")
         time.sleep(0.25)
 
@@ -518,10 +522,13 @@ class GraphicalUserInterface(Ui_MainWindow):
         self.SetConnectionStatus("* Am primit confirmare pentru primirea delimitatorului!")
         time.sleep(0.25)
 
+        buf_size = 1024 if "UART" in communication_mode else len(reconstruction_values) if "TCP" in communication_mode else None
         self.SetConnectionStatus("* Trimitem reconstruction values")
-        rec_vals_str = str(reconstruction_values).replace("[","").replace("]","").replace(" ","")
-        write_fun(connection, rec_vals_str)
-        data = read_fun(connection)
+        rec_vals = [reconstruction_values[index : index + buf_size] for index in range(0, len(reconstruction_values), buf_size)]
+        for maps in rec_vals:
+            rec_vals_str = str(maps).replace("[","").replace("]","").replace(" ","")
+            write_fun(connection, rec_vals_str)
+            time.sleep(0.1)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea reconstruction values!")
         time.sleep(0.25)
 
