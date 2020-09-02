@@ -43,7 +43,8 @@ connection_established = False
 
 # definim credentialele de realizare a conexiunii
 config = {
-	"host" : "192.168.43.43", # HOST-ul serverului
+	#"host" : "192.168.43.43", # HOST-ul serverului
+    "host" : "192.168.43.226", # HOST-ul serverului
     "port" : 7000		  # PORT-ul pe care este mapat serverul
 }
 
@@ -189,6 +190,7 @@ class GraphicalUserInterface(Ui_MainWindow):
                             significance_map, reconstruction_values)
 
         pixmapDWT = UI_Worker.ConvertNumpyImagetoPixmap(DWT)
+
         width = self.wavelet_label.width()
         height = self.wavelet_label.height()
         self.wavelet_label.setPixmap(pixmapDWT.scaled(width,height, Qt.KeepAspectRatio))

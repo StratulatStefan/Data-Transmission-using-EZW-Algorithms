@@ -1,4 +1,9 @@
 from api.general_use import *
+import time
+
+def Time(start, stop, mesaj):
+    print(f"Timp necesar {mesaj} : {(stop - start) / 1e9} secunde")
+
 
 # - functie prin care trimitem significance_map si valorile de recontructie catre decoder
 # - ar trebui sa trimitem catre celalalt RPi, dar momentam, aceasta functie doar va recompune lista de coeficienti pe baza careia se va realiza
@@ -25,9 +30,9 @@ def SendEncodings(decomposition_level, size, conventions, significance_map_encod
     # identificam limitele superioare ale nivelelor de descompunere (la nivel de vector)
     subbands_upper_limits = list(map(lambda x : int(np.power(x[0], 2)), decomposition_levels))
 
+    timeTotal1 = 0
     for signif_index, significant in enumerate(significance_map):
         #identificarea nivelului curent
-
         for idx, level in enumerate(decomposition_levels):
             upper_level = int(np.power(level[0], 2))
             if signif_index < upper_level:
@@ -38,7 +43,7 @@ def SendEncodings(decomposition_level, size, conventions, significance_map_encod
         if significant in ["POS", "NEG"]:
             # valoarea curenta este significanta, deci extragem acest element din lista de valori si il setam in lista finala pe pozitia curenta
             coefficients[index] = reconstruction_values[0] if reconstruction_values != [] else None
-            reconstruction_values = reconstruction_values[1:]
+            reconstruction_values.pop(0)
         elif significant == "Z":
             # valoarea curenta este un Zero, deci doar aceasta valoare va fi pusa pe 0
             coefficients[index] = 0
@@ -76,6 +81,8 @@ def SendEncodings(decomposition_level, size, conventions, significance_map_encod
             descendents = set(descendents)
             for descendent_index in descendents:
                 coefficients[descendent_index] = 0
+
+        # identificam urmatorul index
         for idxx in range(index, len(coefficients)):
             if coefficients[idxx] == inf:
                 index = idxx
@@ -84,6 +91,7 @@ def SendEncodings(decomposition_level, size, conventions, significance_map_encod
     # in acest pas avem vectorul de coeficienti reconstruit
     # urmeaza sa reconstruim matricea de coeficienti pentru a putea recompune imaginea finala
     recomposed_wavelet_coefs = RecomposeDecodedCoefficients(decomposition_level, size, coefficients)
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
     return recomposed_wavelet_coefs
 

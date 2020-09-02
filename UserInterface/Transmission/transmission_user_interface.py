@@ -45,8 +45,9 @@ connection_established = False
 
 # definim un dictionar care va contine credentialele de comunicare
 config = {
-	"host" : "192.168.43.43",
-	"port" : 7000 		  # PORT-ul pe care serverul asculta
+	#"host" : "192.168.43.43",
+    "host" : "192.168.43.226",
+    "port" : 7000 		  # PORT-ul pe care serverul asculta
 }
 
 # aceasta functie va fi apelata la inchiderea ferestrei si se va ocupa de inchiderea conexiunii cu celalalt nod
@@ -104,8 +105,9 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # prelucram url-ul astfel incat sa pastram doar sursa, eliminand protocolul (file:///)
         try:
-            photo_index = url.rfind("/")
-            url = "photos/" + url[photo_index + 1:]
+            url = url.replace("file:///","")
+            #photo_index = url.rfind("/")
+            #url = "photos/" + url[photo_index + 1:]
         except Exception:
             return
 
@@ -254,7 +256,7 @@ class GraphicalUserInterface(Ui_MainWindow):
             return
 
         # functie care va afisa o imagine in fereastra coresp pana cand descompunerea se realizeaza
-        self.VirtualProxy()
+        #self.VirtualProxy()
 
         # imaginea a fost incarcata corect si urmeaza sa extragem parametrii necesari executarii descompunerii
         decomposition_levels = int(self.decomposition_levels.text())

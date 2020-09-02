@@ -112,9 +112,9 @@ def Communication(gui_handler, printer, connection, type):
 			# apelam functia de decodificare si reconstructie
 			# recompunem listele corespunzatoare
 			significance_map = list(filter(lambda value : value != "", sig_map.split(",")))
-			significance_map = list(map(lambda value: int(value), significance_map))
-
 			reconstruction_values = list(filter(lambda value : value != "", rec_vals.split(",")))
+
+			significance_map = list(map(lambda value: int(value), significance_map))
 			reconstruction_values = list(map(lambda value: int(value), reconstruction_values))
 
 			# realizam recompunerea coeficientilor pe baza significance map si reconstruction values
@@ -154,8 +154,8 @@ def Communication(gui_handler, printer, connection, type):
 			# primim significance map sau valorile de reconstructie
 			data_recv = data.decode("utf-8")
 			if delimiter_found == True:
-				rec_vals += data_recv + ","
+				rec_vals += data_recv
 				#write_fun(connection, "* Trimitem confirmare pentru primirea reconstruction values!")
 			else:
-				sig_map += data_recv + ","
+				sig_map += data_recv
 				#write_fun(connection, "* Trimitem confirmare pentru primirea significance map!")
