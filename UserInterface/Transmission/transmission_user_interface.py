@@ -45,8 +45,8 @@ connection_established = False
 
 # definim un dictionar care va contine credentialele de comunicare
 config = {
-	#"host" : "192.168.43.43",
-    "host" : "192.168.43.226",
+    "host" : "192.168.43.43",
+    #"host" : "192.168.43.226",
     "port" : 7000 		  # PORT-ul pe care serverul asculta
 }
 
@@ -105,9 +105,9 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # prelucram url-ul astfel incat sa pastram doar sursa, eliminand protocolul (file:///)
         try:
-            url = url.replace("file:///","")
-            #photo_index = url.rfind("/")
-            #url = "photos/" + url[photo_index + 1:]
+            #url = url.replace("file:///","")
+            photo_index = url.rfind("/")
+            url = "photos/" + url[photo_index + 1:]
         except Exception:
             return
 
@@ -256,7 +256,7 @@ class GraphicalUserInterface(Ui_MainWindow):
             return
 
         # functie care va afisa o imagine in fereastra coresp pana cand descompunerea se realizeaza
-        #self.VirtualProxy()
+        self.VirtualProxy()
 
         # imaginea a fost incarcata corect si urmeaza sa extragem parametrii necesari executarii descompunerii
         decomposition_levels = int(self.decomposition_levels.text())
@@ -526,8 +526,10 @@ class GraphicalUserInterface(Ui_MainWindow):
         buf_size = 1024 if "UART" in communication_mode else len(significance_map) if "TCP" in communication_mode else None
         signif_maps = [significance_map[index : index + buf_size] for index in range(0, len(significance_map), buf_size)]
         self.SetConnectionStatus("* Trimitem significance map")
-        for maps in signif_maps:
+        for indx, maps in enumerate(signif_maps):
             sig_map_str = str(maps).replace("[","").replace("]","").replace(" ","")
+            if indx < len(signif_maps) - 1 and buf_size == 1024:
+                sig_map_str += ","
             write_fun(connection, sig_map_str)
             time.sleep(0.1)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea significance map!")
@@ -542,8 +544,10 @@ class GraphicalUserInterface(Ui_MainWindow):
         buf_size = 1024 if "UART" in communication_mode else len(reconstruction_values) if "TCP" in communication_mode else None
         self.SetConnectionStatus("* Trimitem reconstruction values")
         rec_vals = [reconstruction_values[index : index + buf_size] for index in range(0, len(reconstruction_values), buf_size)]
-        for maps in rec_vals:
+        for indx, maps in enumerate(rec_vals):
             rec_vals_str = str(maps).replace("[","").replace("]","").replace(" ","")
+            if indx < len(rec_vals) and buf_size == 1024:
+                rec_vals_str += ","
             write_fun(connection, rec_vals_str)
             time.sleep(0.1)
         self.SetConnectionStatus("* Am primit confirmare pentru primirea reconstruction values!")

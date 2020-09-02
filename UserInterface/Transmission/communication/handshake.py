@@ -65,7 +65,7 @@ def CommunicationHandshake(printer, TCPConnection, comselection) -> bool:
 		# portul pe care se va mapa UART : /dev/ttyS0
 		# viteza de transfer : 576000 biti pe secunda
 		# astepta a primirii raspunsului la infinit : timeout = None
-		connection = serial.Serial("/dev/ttyS0", baudrate = 921600, timeout=None, bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE, rtscts=False)
+		connection = serial.Serial("/dev/ttyS0", baudrate = 1152000, timeout=None, bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE, rtscts=False)
 
 	# variabila booleana care retine daca tipul de comunicare specificat este invalid
 	invalidcomselection = comselection < 0 or comselection > 1
