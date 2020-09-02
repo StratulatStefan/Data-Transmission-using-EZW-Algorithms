@@ -47,7 +47,7 @@ def CommunicationHandshake(printer,sock, data) -> bool:
 		# portul pe care se va mapa UART : /dev/ttyS0
 		# nr. de biti trimiti pe secunda : baudrate
 		# functia de citire a datelor asteapta primirea datelor la infinit : timeout = None
-		connection = serial.Serial("/dev/ttyS0", baudrate = 921600, timeout=None, bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE, rtscts=False)
+		connection = serial.Serial("/dev/ttyS0", baudrate = 1152000, timeout=None, bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE, rtscts=False)
 	# valoare booleana ce devine True, daca tipul de comunicare stabilit este invalid
 	invalidcomtypeId = comtypeId < 0 or comtypeId > 1
 	# apelam functia de transmitere a mesajelor de verificare, corespunzatoare comunicarii alese
