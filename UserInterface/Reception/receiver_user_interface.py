@@ -11,6 +11,7 @@ import multiprocessing
 
 from PySide2.QtCore import QTimer, QThread
 
+
 from api.wavelets import *
 import time
 #os.system("pyside2-uic receiver.ui > receiver_gui.py")
