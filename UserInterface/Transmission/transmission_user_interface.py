@@ -294,8 +294,10 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # extragem parametrii imaginii rezultate si ii afisam pe interfata, adaugand, ca parametru, si timpul de executie
         qt_image_parameters = self.ExtractImageParameters(pixmapDWT)
-        qt_image_parameters["width"] = int(qt_image_parameters["width"] / 2)
-        qt_image_parameters["height"] = int(qt_image_parameters["height"] / 2)
+        qt_image_parameters["width"] = int(qt_image_parameters["width"])
+        qt_image_parameters["height"] = int(qt_image_parameters["height"])
+        wavelet_bits_needed = int(np.ceil(np.log2(np.max(wavelet_decomposition))))
+        qt_image_parameters["size"] = BytestoKBytes(BitestoBytes(wavelet_bits_needed * qt_image_parameters["width"] * qt_image_parameters["height"]))
         qt_image_parameters["time"] = (stop - start) / 1e9
         self.SetImageParameters([self.wavelet_width, self.wavelet_height, self.wavelet_size, self.wavelet_time],
                                 qt_image_parameters)
@@ -335,7 +337,7 @@ class GraphicalUserInterface(Ui_MainWindow):
 
         # reorganizam matricea astfel incat sa se afle in ordinea de parcurgere specifica SAQ (pe nivele)
         # de asemenea, imaginea va fi sub forma de vector pentru a fi mai usor de parcurs
-        coefficients = ReorganizeMatrix(wavelet_decomposition, decomposition_levels)  # < 100 microsecunde
+        coefficients = ReorganizeMatrix(wavelet_decomposition, decomposition_levels)
 
         # obtinem threshold-ul initial
         threshold = GetInitialThreshold(wavelet_decomposition)
@@ -344,6 +346,10 @@ class GraphicalUserInterface(Ui_MainWindow):
         # se are in vedere nr. de biti necesari pentru cea mai mare valoare
         nof_bites_needed = int(np.ceil(np.log2(np.max(wavelet_decomposition))))
         matrix_size = rows * cols * nof_bites_needed
+        self.wavelet_decomposition_size.setText(f"{BytestoKBytes(BitestoBytes(matrix_size))} Kb")
+
+        # determinam dimensiunea imaginii originale
+        full_size = int(int(self.image_width.toPlainText()) * int(self.image_height.toPlainText()) * 8)
 
         # curatam elemente de pe interfata ce vor afisa parametrii
         self.encoding_significance_map.clear()
@@ -407,20 +413,25 @@ class GraphicalUserInterface(Ui_MainWindow):
             stop = time.time_ns()
             self.encoding_time.setText(f"{(stop - start) / 1e9} s")
 
-            # trimitem significance map si reconstruction values catre celalalt nod
-            self.SendCoefficients(significance_map_encoding, reconstruction_values)
-
             # valorea maxima din significance_map este 3, care poate fi reprezentat pe 2 biti
             signif_map_bites_needed = 2
+
+            # - nu se are in vedere nr. de biti specifici tipului de date pe care se reprezinta datele, ci se are
+            # in vedere numarul de biti necesari reprezentarii valorii maxime din vector
             reconstruction_values_bites_needed = int(np.ceil(np.log2(np.max(reconstruction_values))))
             len_items_to_send = len(significance_map_encoding) * signif_map_bites_needed + \
                                 len(reconstruction_values) * reconstruction_values_bites_needed
 
             self.encoding_significance_map.setText(f"{BytestoKBytes(BitestoBytes(len(significance_map_encoding) * signif_map_bites_needed))} Kb")
+            self.encoding_significants.setText(f"{len(list(filter(lambda value : value != 0, reconstruction_values)))}")
             self.encoding_reconstruction_values.setText(f"{BytestoKBytes(BitestoBytes(len(reconstruction_values) * reconstruction_values_bites_needed))} Kb")
             self.encoding_total.setText(f"{BytestoKBytes(BitestoBytes(len_items_to_send))} Kb")
             self.encoding_difference.setText(f"{BytestoKBytes(BitestoBytes(matrix_size - len_items_to_send))} Kb")
             self.encoding_compression.setText(f"{round(matrix_size / len_items_to_send, 2)}")
+            self.encoding_compressionoriginal.setText(f"{round(int(full_size) / len_items_to_send, 2)}")
+
+            # trimitem significance map si reconstruction values catre celalalt nod
+            self.SendCoefficients(significance_map_encoding, reconstruction_values)
 
         # semnalam finalizarea trimiterii tuturor datelor necesare
         self.SetConnectionStatus("* Trimitem mesajul de finalizare completa...")

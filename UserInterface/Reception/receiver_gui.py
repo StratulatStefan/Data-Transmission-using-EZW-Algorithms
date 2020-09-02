@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
- 
-    
+
 ################################################################################
 ## Form generated from reading UI file 'receiver.ui'
 ##
@@ -153,15 +152,11 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1579, 26))
-        self.menu_help = QMenu(self.menubar)
-        self.menu_help.setObjectName(u"menu_help")
+        self.menubar.setGeometry(QRect(0, 0, 1579, 21))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
-
-        self.menubar.addAction(self.menu_help.menuAction())
 
         self.retranslateUi(MainWindow)
 
@@ -169,7 +164,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Reception", None))
         self.title.setText(QCoreApplication.translate("MainWindow", u"Data Transmission using EZW Algorithm - Receiver", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Decoding and Receiving", None))
         self.con.setTitle(QCoreApplication.translate("MainWindow", u"Connection", None))
@@ -189,6 +184,5 @@ class Ui_MainWindow(object):
         self.wavelet_label.setText("")
         self.groupBox_4.setTitle(QCoreApplication.translate("MainWindow", u"Image Recomposition", None))
         self.image_label.setText("")
-        self.menu_help.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
     # retranslateUi
 

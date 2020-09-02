@@ -75,7 +75,6 @@ def CommunicationHandshake(printer, TCPConnection, comselection) -> bool:
 		return ErrorResponse
 
 	# handshake efectuat cu succes!
-	print(connection)
 	return comselection, connection, True
 
 # functia care trimite mesaje de verificare a conexiunii, corespunzator mediului de comunicare ales

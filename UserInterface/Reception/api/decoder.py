@@ -91,7 +91,6 @@ def SendEncodings(decomposition_level, size, conventions, significance_map_encod
     # in acest pas avem vectorul de coeficienti reconstruit
     # urmeaza sa reconstruim matricea de coeficienti pentru a putea recompune imaginea finala
     recomposed_wavelet_coefs = RecomposeDecodedCoefficients(decomposition_level, size, coefficients)
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
     return recomposed_wavelet_coefs
 
