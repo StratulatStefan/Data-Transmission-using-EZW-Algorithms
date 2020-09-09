@@ -1,8 +1,5 @@
-# Data-Transmission-using-EZW-Algorithms
-
-## The embedded zerotree wavelet algorithm (EZW) is a simple, yet remarkably effective, image compression algorithm having the property that the bits in the bit stream are generated in order of importance, yielding a fully embedded code.
-  * Key concepts
-    * Discrete wavelet transform or hierarhical subband decomposition
-    * Prediction of the absence of significant information across scales by exploiting the self-similarity inherent in images
-    * Entropy-coded succesive-approximation quantization
-    * Universal lossless data compression which is achieved via adaptive arithmetic coding
+<object data="https://github.com/StratulatStefan/Data-Transmission-using-EZW-Algorithms/blob/master/Data%20Transmission%20Using%20EZW%20Algorithm.pdf" type="application/pdf" width="700px" height="700px">
+    <embed src="https://github.com/StratulatStefan/Data-Transmission-using-EZW-Algorithms/blob/master/Data%20Transmission%20Using%20EZW%20Algorithm.pdf">
+        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="http://yoursite.com/the.pdf">Download PDF</a>.</p>
+    </embed>
+</object>
